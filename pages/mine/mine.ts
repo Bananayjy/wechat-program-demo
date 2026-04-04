@@ -1,5 +1,6 @@
 import { transactionsToCsv } from '../../utils/export';
 import {
+  clearAllLocalAccountData,
   loadCategories,
   loadSyncConfig,
   loadTransactions,
@@ -23,6 +24,24 @@ Page({
 
   goCategories() {
     wx.navigateTo({ url: '/pages/category-edit/category-edit' });
+  },
+
+  onClearLocal() {
+    wx.showModal({
+      title: '清除本地数据',
+      content:
+        '将删除本机全部流水与自定义分类，同步配置也会清空，且无法恢复。确定继续？',
+      confirmText: '清除',
+      confirmColor: '#e87868',
+      success: (res) => {
+        if (!res.confirm) return;
+        clearAllLocalAccountData();
+        wx.showToast({ title: '已清除', icon: 'success' });
+        setTimeout(() => {
+          wx.reLaunch({ url: '/pages/index/index' });
+        }, 800);
+      },
+    });
   },
 
   onExport() {

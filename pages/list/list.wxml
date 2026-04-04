@@ -14,7 +14,7 @@
   </view>
 
   <block wx:if="{{groups.length === 0}}">
-    <view class="empty text-muted">暂无记录，去首页记一笔吧</view>
+    <view class="empty text-muted">还没有记录哦～去首页记一笔吧 🍡</view>
   </block>
 
   <block wx:for="{{groups}}" wx:key="dateKey" wx:for-item="g">

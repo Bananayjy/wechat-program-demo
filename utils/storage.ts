@@ -145,4 +145,15 @@ export function saveSyncConfig(c: SyncConfig): void {
   wx.setStorageSync(KEY_SYNC_CONFIG, c);
 }
 
+/** 移除本应用全部本地键（流水、分类、同步配置）；下次 load 时与首次安装一致 */
+export function clearAllLocalAccountData(): void {
+  for (const k of [KEY_TRANSACTIONS, KEY_CATEGORIES, KEY_SYNC_CONFIG]) {
+    try {
+      wx.removeStorageSync(k);
+    } catch {
+      // 单键失败仍继续清其余
+    }
+  }
+}
+
 export { uid };

@@ -10,10 +10,11 @@
 .btn-del {
   flex: 1;
   background: #fff;
-  color: #c45c3e;
-  border: 1rpx solid #e8b4a8;
-  border-radius: 12rpx;
+  color: #e87868;
+  border: 2rpx solid rgba(232, 120, 104, 0.45);
+  border-radius: 999rpx;
   font-size: 30rpx;
+  font-weight: 600;
   padding: 22rpx 32rpx;
 }
 

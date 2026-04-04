@@ -13,6 +13,7 @@ exports.updateTransaction = updateTransaction;
 exports.removeTransaction = removeTransaction;
 exports.loadSyncConfig = loadSyncConfig;
 exports.saveSyncConfig = saveSyncConfig;
+exports.clearAllLocalAccountData = clearAllLocalAccountData;
 exports.uid = uid;
 const KEY_CATEGORIES = 'accountbook_categories_v1';
 const KEY_TRANSACTIONS = 'accountbook_transactions_v1';
@@ -137,4 +138,14 @@ function loadSyncConfig() {
 }
 function saveSyncConfig(c) {
     wx.setStorageSync(KEY_SYNC_CONFIG, c);
+}
+function clearAllLocalAccountData() {
+    for (const k of [KEY_TRANSACTIONS, KEY_CATEGORIES, KEY_SYNC_CONFIG]) {
+        try {
+            wx.removeStorageSync(k);
+        }
+        catch (_a) {
+            // ignore
+        }
+    }
 }

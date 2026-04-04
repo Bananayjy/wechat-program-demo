@@ -1,5 +1,5 @@
 .page {
-  padding: 24rpx 0 48rpx;
+  padding: 28rpx 0 48rpx;
   min-height: 100vh;
 }
 
@@ -8,51 +8,72 @@
   justify-content: space-between;
   align-items: center;
   font-size: 30rpx;
-  padding: 32rpx 28rpx;
+  padding: 34rpx 28rpx;
+  font-weight: 600;
+  color: #5c4a42;
+}
+
+.cell-danger {
+  color: #c45c50;
+}
+
+.cell-danger .chev {
+  color: rgba(232, 120, 104, 0.65);
+}
+
+.clear-hint {
+  display: block;
+  margin: -8rpx 40rpx 20rpx;
+  font-size: 22rpx;
+  line-height: 1.45;
 }
 
 .chev {
-  color: #ccc;
-  font-size: 36rpx;
+  color: #e8dcc8;
+  font-size: 40rpx;
+  font-weight: 300;
 }
 
 .block-title {
-  font-weight: 600;
-  margin-bottom: 8rpx;
+  font-weight: 700;
+  margin-bottom: 10rpx;
   display: block;
+  color: #8b7a58;
 }
 
 .sub {
   display: block;
-  margin-bottom: 20rpx;
+  margin-bottom: 22rpx;
   font-size: 22rpx;
-  line-height: 1.4;
+  line-height: 1.45;
 }
 
 .field {
-  margin-bottom: 20rpx;
+  margin-bottom: 22rpx;
 }
 
 .label {
   font-size: 24rpx;
-  color: #8a8a8a;
-  margin-bottom: 8rpx;
+  color: #a89878;
+  margin-bottom: 10rpx;
   display: block;
 }
 
 .input {
-  background: #f3f4f6;
-  border-radius: 12rpx;
-  padding: 18rpx 22rpx;
+  background: rgba(255, 224, 130, 0.22);
+  border-radius: 20rpx;
+  padding: 20rpx 24rpx;
   font-size: 26rpx;
+  border: 2rpx solid rgba(255, 193, 7, 0.2);
 }
 
 .switch-row {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  margin-bottom: 20rpx;
+  margin-bottom: 22rpx;
   font-size: 28rpx;
+  color: #5c4a42;
 }
 
 .sync-btns {
@@ -65,12 +86,13 @@
   flex: 1;
   min-width: 160rpx;
   font-size: 26rpx;
-  padding: 16rpx 12rpx;
+  padding: 18rpx 12rpx;
   background: #fff;
-  color: #1a7f5a;
-  border: 1rpx solid #1a7f5a;
-  border-radius: 12rpx;
+  color: #d48c00;
+  border: 2rpx solid rgba(255, 193, 7, 0.45);
+  border-radius: 999rpx;
   line-height: 1.4;
+  font-weight: 600;
 }
 
 .btn-outline::after {
@@ -79,6 +101,7 @@
 
 .footer {
   text-align: center;
-  padding: 40rpx;
+  padding: 48rpx;
   font-size: 24rpx;
+  color: #c4b4a8;
 }

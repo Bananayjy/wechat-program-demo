@@ -1,5 +1,5 @@
 .page {
-  padding: 24rpx 0 48rpx;
+  padding: 28rpx 0 48rpx;
   min-height: 100vh;
 }
 
@@ -8,12 +8,13 @@
   justify-content: space-between;
   align-items: center;
   font-size: 28rpx;
-  margin-bottom: 24rpx;
+  margin-bottom: 28rpx;
+  color: #6b5a4a;
 }
 
 .month-val {
-  color: #1a7f5a;
-  font-weight: 600;
+  color: #d48c00;
+  font-weight: 700;
 }
 
 .sum-row {
@@ -23,23 +24,26 @@
 }
 
 .sum-amt {
-  font-size: 36rpx;
-  font-weight: 600;
-  margin-top: 8rpx;
+  font-size: 38rpx;
+  font-weight: 700;
+  margin-top: 10rpx;
+  letter-spacing: 0.5rpx;
 }
 
 .block-title {
-  font-weight: 600;
-  margin-bottom: 20rpx;
+  font-weight: 700;
+  margin-bottom: 24rpx;
   display: block;
   font-size: 28rpx;
+  color: #8b7a58;
+  letter-spacing: 0.5rpx;
 }
 
 .bar-row {
   display: flex;
   align-items: center;
-  margin-bottom: 20rpx;
-  gap: 12rpx;
+  margin-bottom: 22rpx;
+  gap: 14rpx;
 }
 
 .bar-name {
@@ -49,12 +53,13 @@
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
+  color: #7a6a58;
 }
 
 .bar-track {
   flex: 1;
-  height: 16rpx;
-  background: #eef0f3;
+  height: 20rpx;
+  background: rgba(255, 193, 7, 0.14);
   border-radius: 999rpx;
   overflow: hidden;
 }
@@ -62,21 +67,21 @@
 .bar-fill {
   height: 100%;
   border-radius: 999rpx;
-  min-width: 4rpx;
+  min-width: 6rpx;
 }
 
 .bar-fill.expense {
-  background: linear-gradient(90deg, #e8a090, #c45c3e);
+  background: linear-gradient(90deg, #ffd4a8 0%, #f29878 50%, #e87868 100%);
 }
 
 .bar-fill.income {
-  background: linear-gradient(90deg, #6bc49a, #1a7f5a);
+  background: linear-gradient(90deg, #d4f0c4 0%, #8fd4a8 50%, #5aab7a 100%);
 }
 
 .bar-amt {
   width: 100rpx;
   text-align: right;
   font-size: 22rpx;
-  color: #666;
+  color: #9a8a78;
   flex-shrink: 0;
 }

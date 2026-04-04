@@ -1,31 +1,138 @@
 <view class="page safe-bottom">
-  <view class="hero card">
-    <text class="hero-title">今日概览</text>
-    <view class="hero-row">
-      <view>
-        <text class="text-muted">收入</text>
-        <view class="amount-income hero-amount">¥{{todayIncome}}</view>
-      </view>
-      <view>
-        <text class="text-muted">支出</text>
-        <view class="amount-expense hero-amount">¥{{todayExpense}}</view>
-      </view>
-    </view>
+  <view class="summary-stage">
+    <swiper
+      class="summary-swiper"
+      circular="{{true}}"
+      duration="{{300}}"
+      previous-margin="32rpx"
+      next-margin="32rpx"
+    >
+      <swiper-item>
+        <view class="summary-item-wrap">
+          <view class="card summary-slide">
+            <text class="hero-title">今日概览 <text class="hero-emoji">✨</text></text>
+            <view class="hero-row">
+              <view>
+                <text class="text-muted">收入</text>
+                <view class="amount-income hero-amount">¥{{todayIncome}}</view>
+              </view>
+              <view>
+                <text class="text-muted">支出</text>
+                <view class="amount-expense hero-amount">¥{{todayExpense}}</view>
+              </view>
+            </view>
+            <view class="rank-section">
+              <text class="rank-title">收入 TOP3</text>
+              <block wx:if="{{todayRankIncome.length}}">
+                <view wx:for="{{todayRankIncome}}" wx:key="id" class="rank-row">
+                  <text class="rank-name">{{item.name}}</text>
+                  <text class="rank-amt amount-income">¥{{item.amount}}</text>
+                </view>
+              </block>
+              <block wx:else>
+                <text class="rank-empty">暂无记录</text>
+              </block>
+            </view>
+            <view class="rank-section">
+              <text class="rank-title">支出 TOP3</text>
+              <block wx:if="{{todayRankExpense.length}}">
+                <view wx:for="{{todayRankExpense}}" wx:key="id" class="rank-row">
+                  <text class="rank-name">{{item.name}}</text>
+                  <text class="rank-amt amount-expense">¥{{item.amount}}</text>
+                </view>
+              </block>
+              <block wx:else>
+                <text class="rank-empty">暂无记录</text>
+              </block>
+            </view>
+          </view>
+        </view>
+      </swiper-item>
+      <swiper-item>
+        <view class="summary-item-wrap">
+        <view class="card summary-slide">
+          <text class="hero-title">本月小结 <text class="hero-emoji">🌸</text></text>
+          <view class="hero-row">
+            <view>
+              <text class="text-muted">收入</text>
+              <view class="amount-income hero-amount">¥{{monthIncome}}</view>
+            </view>
+            <view>
+              <text class="text-muted">支出</text>
+              <view class="amount-expense hero-amount">¥{{monthExpense}}</view>
+            </view>
+          </view>
+          <view class="rank-section">
+            <text class="rank-title">收入 TOP3</text>
+            <block wx:if="{{monthRankIncome.length}}">
+              <view wx:for="{{monthRankIncome}}" wx:key="id" class="rank-row">
+                <text class="rank-name">{{item.name}}</text>
+                <text class="rank-amt amount-income">¥{{item.amount}}</text>
+              </view>
+            </block>
+            <block wx:else>
+              <text class="rank-empty">暂无记录</text>
+            </block>
+          </view>
+          <view class="rank-section">
+            <text class="rank-title">支出 TOP3</text>
+            <block wx:if="{{monthRankExpense.length}}">
+              <view wx:for="{{monthRankExpense}}" wx:key="id" class="rank-row">
+                <text class="rank-name">{{item.name}}</text>
+                <text class="rank-amt amount-expense">¥{{item.amount}}</text>
+              </view>
+            </block>
+            <block wx:else>
+              <text class="rank-empty">暂无记录</text>
+            </block>
+          </view>
+        </view>
+        </view>
+      </swiper-item>
+      <swiper-item>
+        <view class="summary-item-wrap">
+        <view class="card summary-slide">
+          <text class="hero-title">年度小结 <text class="hero-emoji">🌸</text></text>
+          <view class="hero-row">
+            <view>
+              <text class="text-muted">收入</text>
+              <view class="amount-income hero-amount">¥{{monthIncome}}</view>
+            </view>
+            <view>
+              <text class="text-muted">支出</text>
+              <view class="amount-expense hero-amount">¥{{monthExpense}}</view>
+            </view>
+          </view>
+          <view class="rank-section">
+            <text class="rank-title">收入 TOP3</text>
+            <block wx:if="{{monthRankIncome.length}}">
+              <view wx:for="{{monthRankIncome}}" wx:key="id" class="rank-row">
+                <text class="rank-name">{{item.name}}</text>
+                <text class="rank-amt amount-income">¥{{item.amount}}</text>
+              </view>
+            </block>
+            <block wx:else>
+              <text class="rank-empty">暂无记录</text>
+            </block>
+          </view>
+          <view class="rank-section">
+            <text class="rank-title">支出 TOP3</text>
+            <block wx:if="{{monthRankExpense.length}}">
+              <view wx:for="{{monthRankExpense}}" wx:key="id" class="rank-row">
+                <text class="rank-name">{{item.name}}</text>
+                <text class="rank-amt amount-expense">¥{{item.amount}}</text>
+              </view>
+            </block>
+            <block wx:else>
+              <text class="rank-empty">暂无记录</text>
+            </block>
+          </view>
+        </view>
+        </view>
+      </swiper-item>
+    </swiper>
   </view>
 
-  <view class="card month-card">
-    <text class="hero-title">本月</text>
-    <view class="hero-row">
-      <view>
-        <text class="text-muted">收入</text>
-        <view class="amount-income hero-amount small">¥{{monthIncome}}</view>
-      </view>
-      <view>
-        <text class="text-muted">支出</text>
-        <view class="amount-expense hero-amount small">¥{{monthExpense}}</view>
-      </view>
-    </view>
-  </view>
+  <button class="btn-primary fab" bindtap="goAdd">记一笔 ✏️</button>
 
-  <button class="btn-primary fab" bindtap="goAdd">记一笔</button>
 </view>

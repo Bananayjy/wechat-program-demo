@@ -10,15 +10,15 @@
   ],
   "window": {
     "navigationBarTitleText": "日常记账",
-    "navigationBarBackgroundColor": "#1a7f5a",
+    "navigationBarBackgroundColor": "#E8A010",
     "navigationBarTextStyle": "white",
-    "backgroundColor": "#f5f6f8"
+    "backgroundColor": "#FFFBEA"
   },
   "tabBar": {
-    "color": "#8a8a8a",
-    "selectedColor": "#1a7f5a",
-    "backgroundColor": "#ffffff",
-    "borderStyle": "black",
+    "color": "#B8A896",
+    "selectedColor": "#E8A010",
+    "backgroundColor": "#FFFEF8",
+    "borderStyle": "white",
     "list": [
       {
         "pagePath": "pages/index/index",

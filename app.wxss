@@ -1,8 +1,9 @@
 page {
-  background-color: #f5f6f8;
-  color: #1a1a1a;
+  background-color: #fffbeb;
+  background-image: linear-gradient(180deg, #fffef8 0%, #fff8e1 45%, #fff3d0 100%);
+  color: #5c4a42;
   font-size: 28rpx;
-  line-height: 1.5;
+  line-height: 1.55;
   box-sizing: border-box;
 }
 
@@ -12,20 +13,23 @@ page {
 }
 
 .card {
-  background: #fff;
-  border-radius: 16rpx;
-  padding: 24rpx 28rpx;
+  background: linear-gradient(145deg, #ffffff 0%, #fffef8 100%);
+  border-radius: 28rpx;
+  padding: 28rpx 32rpx;
   margin: 0 24rpx 24rpx;
-  box-shadow: 0 4rpx 24rpx rgba(0, 0, 0, 0.06);
+  box-shadow: 0 8rpx 28rpx rgba(255, 193, 7, 0.12), 0 2rpx 8rpx rgba(200, 170, 100, 0.08);
+  border: 2rpx solid rgba(255, 255, 255, 0.95);
 }
 
 .btn-primary {
-  background: #1a7f5a;
+  background: linear-gradient(135deg, #ffe082 0%, #ffca28 50%, #ffb300 100%);
   color: #fff;
-  border-radius: 12rpx;
+  border-radius: 999rpx;
   font-size: 30rpx;
-  padding: 22rpx 32rpx;
+  font-weight: 600;
+  padding: 24rpx 36rpx;
   border: none;
+  box-shadow: 0 8rpx 24rpx rgba(255, 179, 0, 0.32);
 }
 
 .btn-primary::after {
@@ -33,14 +37,14 @@ page {
 }
 
 .text-muted {
-  color: #8a8a8a;
+  color: #a89878;
   font-size: 24rpx;
 }
 
 .amount-income {
-  color: #1a7f5a;
+  color: #5aab7a;
 }
 
 .amount-expense {
-  color: #c45c3e;
+  color: #e87868;
 }

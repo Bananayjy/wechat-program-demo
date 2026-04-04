@@ -19,7 +19,7 @@
   </view>
 
   <view class="card">
-    <text class="block-title">支出构成</text>
+    <text class="block-title">支出构成 🍬</text>
     <block wx:if="{{expenseBars.length === 0}}">
       <text class="text-muted">本月暂无支出</text>
     </block>
@@ -35,7 +35,7 @@
   </view>
 
   <view class="card">
-    <text class="block-title">收入构成</text>
+    <text class="block-title">收入构成 🍭</text>
     <block wx:if="{{incomeBars.length === 0}}">
       <text class="text-muted">本月暂无收入</text>
     </block>

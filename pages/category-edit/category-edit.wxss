@@ -1,5 +1,7 @@
+@import '../add/add.wxss';
+
 .page {
-  padding: 24rpx 0 48rpx;
+  padding: 28rpx 0 48rpx;
   min-height: 100vh;
 }
 
@@ -8,7 +10,7 @@
 }
 
 .seg.small {
-  margin-bottom: 20rpx;
+  margin-bottom: 22rpx;
 }
 
 .add-row {
@@ -19,19 +21,22 @@
 
 .add-row .input {
   flex: 1;
-  background: #f3f4f6;
-  border-radius: 12rpx;
-  padding: 18rpx 22rpx;
+  background: rgba(255, 224, 130, 0.2);
+  border-radius: 20rpx;
+  padding: 20rpx 24rpx;
   font-size: 28rpx;
+  border: 2rpx solid rgba(255, 193, 7, 0.18);
 }
 
 .btn-mini {
   font-size: 26rpx;
-  padding: 16rpx 28rpx;
-  background: #1a7f5a;
+  padding: 18rpx 32rpx;
+  background: linear-gradient(135deg, #ffe082 0%, #ffca28 100%);
   color: #fff;
-  border-radius: 12rpx;
+  border-radius: 999rpx;
   line-height: 1.4;
+  font-weight: 600;
+  box-shadow: 0 6rpx 18rpx rgba(255, 179, 0, 0.28);
 }
 
 .btn-mini::after {
@@ -39,18 +44,20 @@
 }
 
 .section-title {
-  font-weight: 600;
-  margin-bottom: 16rpx;
+  font-weight: 700;
+  margin-bottom: 18rpx;
   display: block;
   font-size: 28rpx;
+  color: #8b7a58;
 }
 
 .cat-row {
   display: flex;
   align-items: center;
-  padding: 22rpx 0;
-  border-bottom: 1rpx solid #f0f0f0;
+  padding: 24rpx 0;
+  border-bottom: 2rpx dashed rgba(255, 193, 7, 0.2);
   font-size: 28rpx;
+  color: #5c4a42;
 }
 
 .cat-row:last-child {
@@ -59,19 +66,21 @@
 
 .cat-row text:first-child {
   flex: 1;
+  font-weight: 500;
 }
 
 .link {
-  color: #1a7f5a;
+  color: #d48c00;
   margin-left: 24rpx;
   font-size: 26rpx;
+  font-weight: 600;
 }
 
 .link.danger {
-  color: #c45c3e;
+  color: #e87868;
 }
 
 .tip {
-  padding: 16rpx 32rpx;
+  padding: 20rpx 36rpx;
   font-size: 24rpx;
 }
