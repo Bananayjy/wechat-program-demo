@@ -7,12 +7,134 @@
   margin-bottom: 12rpx;
 }
 
+.filter-card {
+  padding: 8rpx 0;
+}
+
+.filter-seg-wrap {
+  padding: 12rpx 24rpx 20rpx;
+}
+
+.filter-seg-label {
+  display: block;
+  font-size: 24rpx;
+  color: #a89878;
+  font-weight: 600;
+  margin-bottom: 14rpx;
+}
+
+.filter-seg {
+  display: flex;
+  background: rgba(255, 193, 7, 0.14);
+  border-radius: 999rpx;
+  padding: 8rpx;
+}
+
+.filter-seg-item {
+  flex: 1;
+  text-align: center;
+  padding: 18rpx 12rpx;
+  border-radius: 999rpx;
+  font-size: 28rpx;
+  color: #9a8a78;
+  font-weight: 500;
+}
+
+.filter-seg-item.on {
+  background: linear-gradient(135deg, #fff 0%, #fffbeb 100%);
+  color: #d48c00;
+  font-weight: 700;
+  box-shadow: 0 4rpx 16rpx rgba(255, 193, 7, 0.22);
+}
+
 .filter-line {
   display: flex;
   justify-content: space-between;
   align-items: center;
   font-size: 28rpx;
   color: #6b5a4a;
+  padding: 10rpx 28rpx;
+}
+
+.filter-line-border {
+  border-top: 0rpx solid rgba(255, 193, 7, 0.2);
+  border-bottom: 0rpx solid rgba(255, 193, 7, 0.2);
+}
+
+.month-header {
+  padding: 20rpx 28rpx 16rpx;
+  margin-top: 8rpx;
+  background: rgba(255, 224, 130, 0.18);
+  border-radius: 16rpx;
+  margin-left: 24rpx;
+  margin-right: 24rpx;
+}
+
+.month-header-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.month-title {
+  flex: 1;
+  font-size: 30rpx;
+  font-weight: 700;
+  color: #8b7a58;
+}
+
+.month-chev {
+  font-size: 24rpx;
+  color: #a89878;
+  margin-left: 16rpx;
+}
+
+.month-summary {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  margin-top: 12rpx;
+  font-size: 24rpx;
+  gap: 8rpx;
+}
+
+.month-sum-label {
+  color: #a89878;
+  margin-right: 4rpx;
+}
+
+.month-sum-sep {
+  color: #c4b4a8;
+  padding: 0 4rpx;
+}
+
+.day-title-row {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: space-between;
+  align-items: baseline;
+  gap: 12rpx;
+  padding: 20rpx 36rpx 8rpx;
+}
+
+.day-date {
+  font-size: 26rpx;
+  color: #b8a080;
+  font-weight: 600;
+  letter-spacing: 0.5rpx;
+}
+
+.day-summary {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  font-size: 22rpx;
+  gap: 6rpx;
+}
+
+.day-sum-sep {
+  color: #c4b4a8;
+  padding: 0 2rpx;
 }
 
 .filter-val {
@@ -25,14 +147,6 @@
   padding: 100rpx 32rpx;
   font-size: 28rpx;
   color: #b8a896;
-}
-
-.day-title {
-  padding: 20rpx 36rpx 12rpx;
-  font-size: 26rpx;
-  color: #b8a080;
-  font-weight: 600;
-  letter-spacing: 0.5rpx;
 }
 
 .list-card {

@@ -2,6 +2,32 @@
 Object.defineProperty(exports, "__esModule", { value: true });
 const format_1 = require("../../utils/format");
 const storage_1 = require("../../utils/storage");
+function appendCalcKey(amountYuan, key) {
+    let s = amountYuan;
+    if (key === 'clear')
+        return '';
+    if (key === 'del')
+        return s.slice(0, -1);
+    if (key === '.') {
+        if (s.includes('.'))
+            return s;
+        return s === '' ? '0.' : s + '.';
+    }
+    if (!/^\d$/.test(key))
+        return s;
+    const parts = s.split('.');
+    if (parts.length === 2 && parts[1].length >= 2)
+        return s;
+    if (s === '')
+        return key;
+    if (s === '0')
+        return key;
+    const next = s + key;
+    const n = parseFloat(next);
+    if (Number.isNaN(n) || n > 99999999.99)
+        return s;
+    return next;
+}
 Page({
     data: {
         txType: 'expense',
@@ -34,8 +60,12 @@ Page({
                 : first,
         });
     },
-    onAmountInput(e) {
-        this.setData({ amountYuan: e.detail.value });
+    onCalcKey(e) {
+        const key = e.currentTarget.dataset.key;
+        if (!key)
+            return;
+        const next = appendCalcKey(this.data.amountYuan, key);
+        this.setData({ amountYuan: next });
     },
     onCategoryTap(e) {
         const id = e.currentTarget.dataset.id;

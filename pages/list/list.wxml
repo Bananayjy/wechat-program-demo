@@ -1,41 +1,99 @@
 <view class="page safe-bottom">
-  <view class="toolbar card">
+  <view class="toolbar card filter-card">
+    <view class="filter-seg-wrap">
+      <text class="filter-seg-label">收支</text>
+      <view class="filter-seg">
+        <view
+          class="filter-seg-item {{typeIndex === 0 ? 'on' : ''}}"
+          bindtap="onTypeSegmentTap"
+          data-index="0"
+        >全部</view>
+        <view
+          class="filter-seg-item {{typeIndex === 1 ? 'on' : ''}}"
+          bindtap="onTypeSegmentTap"
+          data-index="1"
+        >收入</view>
+        <view
+          class="filter-seg-item {{typeIndex === 2 ? 'on' : ''}}"
+          bindtap="onTypeSegmentTap"
+          data-index="2"
+        >支出</view>
+      </view>
+    </view>
     <picker
       mode="selector"
       range="{{filterLabels}}"
       value="{{filterIndex}}"
       bindchange="onFilterChange"
     >
+      <view class="filter-line filter-line-border">
+        <text>分类</text>
+        <text class="filter-val">{{filterLabelDisplay}}</text>
+      </view>
+    </picker>
+    <picker
+      mode="selector"
+      range="{{monthFilterLabels}}"
+      value="{{monthFilterIndex}}"
+      bindchange="onMonthFilterChange"
+    >
       <view class="filter-line">
-        <text>分类筛选</text>
-        <text class="filter-val">{{filterLabels[filterIndex]}}</text>
+        <text>时间</text>
+        <text class="filter-val">{{monthFilterDisplay}}</text>
       </view>
     </picker>
   </view>
 
-  <block wx:if="{{groups.length === 0}}">
+  <block wx:if="{{monthGroups.length === 0}}">
     <view class="empty text-muted">还没有记录哦～去首页记一笔吧 🍡</view>
   </block>
 
-  <block wx:for="{{groups}}" wx:key="dateKey" wx:for-item="g">
-    <view class="day-title">{{g.dateLabel}}</view>
-    <view class="card list-card">
-      <view
-        wx:for="{{g.items}}"
-        wx:key="id"
-        wx:for-item="row"
-        class="row"
-        data-id="{{row.id}}"
-        bindtap="onRowTap"
-      >
-        <view class="row-left">
-          <text class="cat-name">{{row.categoryName}}</text>
-          <text class="note text-muted" wx:if="{{row.note}}">{{row.note}}</text>
-        </view>
-        <text class="{{row.type === 'income' ? 'amount-income' : 'amount-expense'}} row-amt">
-          {{row.type === 'income' ? '+' : '-'}}{{row.amountYuan}}
-        </text>
+  <block wx:for="{{monthGroups}}" wx:key="monthKey" wx:for-item="m">
+    <view
+      class="month-header"
+      data-key="{{m.monthKey}}"
+      bindtap="onMonthToggle"
+    >
+      <view class="month-header-row">
+        <text class="month-title">{{m.monthLabel}}</text>
+        <text class="month-chev">{{m.expanded ? '▼' : '▶'}}</text>
+      </view>
+      <view class="month-summary">
+        <text class="month-sum-label">小计</text>
+        <text class="amount-income">收 ¥{{m.incomeTotalYuan}}</text>
+        <text class="month-sum-sep">·</text>
+        <text class="amount-expense">支 ¥{{m.expenseTotalYuan}}</text>
       </view>
     </view>
+    <block wx:if="{{m.expanded}}">
+      <block wx:for="{{m.dayGroups}}" wx:key="dateKey" wx:for-item="g">
+        <view class="day-title-row">
+          <text class="day-date">{{g.dateLabel}}</text>
+          <view class="day-summary">
+            <text class="amount-income">收 ¥{{g.incomeTotalYuan}}</text>
+            <text class="day-sum-sep">·</text>
+            <text class="amount-expense">支 ¥{{g.expenseTotalYuan}}</text>
+          </view>
+        </view>
+        <view class="card list-card">
+          <view
+            wx:for="{{g.items}}"
+            wx:key="id"
+            wx:for-item="row"
+            class="row"
+            data-id="{{row.id}}"
+            bindtap="onRowTap"
+          >
+            <view class="row-left">
+              <text class="cat-name">{{row.categoryName}}</text>
+              <text class="note text-muted" wx:if="{{row.note}}">{{row.note}}</text>
+            </view>
+            <text class="{{row.type === 'income' ? 'amount-income' : 'amount-expense'}} row-amt">
+              {{row.type === 'income' ? '+' : '-'}}{{row.amountYuan}}
+            </text>
+          </view>
+        </view>
+      </block>
+    </block>
   </block>
 </view>

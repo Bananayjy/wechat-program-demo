@@ -15,13 +15,11 @@
 
     <view class="field">
       <text class="label">金额（元）</text>
-      <input
-        class="input amount"
-        type="digit"
-        placeholder="0.00"
-        value="{{amountYuan}}"
-        bindinput="onAmountInput"
-      />
+      <view class="amount-row">
+        <view class="input amount amount-display-wrap">
+          <text class="amount-display {{amountYuan ? '' : 'amount-placeholder'}}">￥{{amountYuan || '0.00'}}</text>
+        </view>
+      </view>
     </view>
 
     <view class="field">
@@ -54,7 +52,37 @@
         bindinput="onNoteInput"
       />
     </view>
+
+    <view class="calc-hint">点点小键盘输入～</view>
+      <view class="calc">
+        <view class="calc-row">
+          <view class="calc-key" data-key="7" bindtap="onCalcKey">7</view>
+          <view class="calc-key" data-key="8" bindtap="onCalcKey">8</view>
+          <view class="calc-key" data-key="9" bindtap="onCalcKey">9</view>
+          <view class="calc-key-spacer"></view>
+        </view>
+        <view class="calc-row">
+          <view class="calc-key" data-key="4" bindtap="onCalcKey">4</view>
+          <view class="calc-key" data-key="5" bindtap="onCalcKey">5</view>
+          <view class="calc-key" data-key="6" bindtap="onCalcKey">6</view>
+          <view class="calc-key-spacer"></view>
+        </view>
+        <view class="calc-row">
+          <view class="calc-key" data-key="1" bindtap="onCalcKey">1</view>
+          <view class="calc-key" data-key="2" bindtap="onCalcKey">2</view>
+          <view class="calc-key" data-key="3" bindtap="onCalcKey">3</view>
+          <view class="calc-key-spacer"></view>
+        </view>
+        <view class="calc-row">
+          <view class="calc-key calc-key-soft" data-key="clear" bindtap="onCalcKey">C</view>
+          <view class="calc-key" data-key="0" bindtap="onCalcKey">0</view>
+          <view class="calc-key" data-key="." bindtap="onCalcKey">.</view>
+          <view class="calc-key calc-key-del" data-key="del" bindtap="onCalcKey">⌫</view>
+        </view>
+      </view>
   </view>
+
+  
 
   <button class="btn-primary save" bindtap="onSave">保存</button>
 </view>

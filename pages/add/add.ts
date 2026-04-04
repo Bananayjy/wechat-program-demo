@@ -1,4 +1,24 @@
 import { formatDate, yuanInputToFen } from '../../utils/format';
+
+/** 计算器按键拼接金额，与 yuanInputToFen 上限一致 */
+function appendCalcKey(amountYuan: string, key: string): string {
+  let s = amountYuan;
+  if (key === 'clear') return '';
+  if (key === 'del') return s.slice(0, -1);
+  if (key === '.') {
+    if (s.includes('.')) return s;
+    return s === '' ? '0.' : s + '.';
+  }
+  if (!/^\d$/.test(key)) return s;
+  const parts = s.split('.');
+  if (parts.length === 2 && parts[1].length >= 2) return s;
+  if (s === '') return key;
+  if (s === '0') return key;
+  const next = s + key;
+  const n = parseFloat(next);
+  if (Number.isNaN(n) || n > 99999999.99) return s;
+  return next;
+}
 import { addTransaction, loadCategories } from '../../utils/storage';
 import type { TxType } from '../../utils/types';
 
@@ -36,8 +56,11 @@ Page({
     });
   },
 
-  onAmountInput(e: WechatMiniprogram.Input) {
-    this.setData({ amountYuan: e.detail.value });
+  onCalcKey(e: WechatMiniprogram.TouchEvent) {
+    const key = e.currentTarget.dataset.key as string;
+    if (!key) return;
+    const next = appendCalcKey(this.data.amountYuan, key);
+    this.setData({ amountYuan: next });
   },
 
   onCategoryTap(e: WechatMiniprogram.TouchEvent) {
