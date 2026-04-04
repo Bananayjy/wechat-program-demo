@@ -1,0 +1,36 @@
+<view class="page safe-bottom">
+  <view class="card cell" bindtap="goCategories">
+    <text>分类管理</text>
+    <text class="chev">›</text>
+  </view>
+
+  <view class="card cell" bindtap="onExport">
+    <text>导出 CSV</text>
+    <text class="chev">›</text>
+  </view>
+
+  <view class="card">
+    <text class="block-title">数据同步（可选）</text>
+    <text class="text-muted sub">需服务端提供接口；请求路径以 / 开头，不含 /kapi</text>
+    <view class="field">
+      <text class="label">https 站点根地址</text>
+      <input
+        class="input"
+        placeholder="https://api.example.com"
+        value="{{apiBase}}"
+        bindinput="onApiBaseInput"
+      />
+    </view>
+    <label class="switch-row">
+      <text>启用同步</text>
+      <switch checked="{{syncEnabled}}" bindchange="onSyncSwitch" />
+    </label>
+    <view class="sync-btns">
+      <button class="btn-outline" bindtap="onSaveSync">保存配置</button>
+      <button class="btn-outline" bindtap="onPush">上传</button>
+      <button class="btn-outline" bindtap="onPull">拉取</button>
+    </view>
+  </view>
+
+  <view class="footer text-muted">日常记账 · 本地存储</view>
+</view>

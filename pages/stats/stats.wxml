@@ -1,0 +1,52 @@
+<view class="page safe-bottom">
+  <view class="card">
+    <picker mode="date" fields="month" value="{{monthStr}}" bindchange="onMonthChange">
+      <view class="month-line">
+        <text>统计月份</text>
+        <text class="month-val">{{monthStr}}</text>
+      </view>
+    </picker>
+    <view class="sum-row">
+      <view>
+        <text class="text-muted">收入</text>
+        <view class="amount-income sum-amt">¥{{incomeYuan}}</view>
+      </view>
+      <view>
+        <text class="text-muted">支出</text>
+        <view class="amount-expense sum-amt">¥{{expenseYuan}}</view>
+      </view>
+    </view>
+  </view>
+
+  <view class="card">
+    <text class="block-title">支出构成</text>
+    <block wx:if="{{expenseBars.length === 0}}">
+      <text class="text-muted">本月暂无支出</text>
+    </block>
+    <block wx:for="{{expenseBars}}" wx:key="id">
+      <view class="bar-row">
+        <text class="bar-name">{{item.name}}</text>
+        <view class="bar-track">
+          <view class="bar-fill expense" style="width: {{item.pct}}%;"></view>
+        </view>
+        <text class="bar-amt">{{item.yuan}}</text>
+      </view>
+    </block>
+  </view>
+
+  <view class="card">
+    <text class="block-title">收入构成</text>
+    <block wx:if="{{incomeBars.length === 0}}">
+      <text class="text-muted">本月暂无收入</text>
+    </block>
+    <block wx:for="{{incomeBars}}" wx:key="id">
+      <view class="bar-row">
+        <text class="bar-name">{{item.name}}</text>
+        <view class="bar-track">
+          <view class="bar-fill income" style="width: {{item.pct}}%;"></view>
+        </view>
+        <text class="bar-amt">{{item.yuan}}</text>
+      </view>
+    </block>
+  </view>
+</view>

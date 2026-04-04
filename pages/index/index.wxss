@@ -1,0 +1,41 @@
+.page {
+  padding: 24rpx 0 200rpx;
+  min-height: 100vh;
+}
+
+.hero-title {
+  font-size: 30rpx;
+  font-weight: 600;
+  margin-bottom: 20rpx;
+  display: block;
+}
+
+.hero-row {
+  display: flex;
+  justify-content: space-between;
+  gap: 32rpx;
+}
+
+.hero-amount {
+  font-size: 40rpx;
+  font-weight: 600;
+  margin-top: 8rpx;
+}
+
+.hero-amount.small {
+  font-size: 34rpx;
+}
+
+.month-card {
+  margin-top: 0;
+}
+
+/* 抬高以避免与 TabBar 重叠 */
+.fab {
+  position: fixed;
+  left: 48rpx;
+  right: 48rpx;
+  bottom: calc(112rpx + constant(safe-area-inset-bottom));
+  bottom: calc(112rpx + env(safe-area-inset-bottom));
+  z-index: 10;
+}

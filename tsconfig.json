@@ -1,0 +1,16 @@
+{
+  "compilerOptions": {
+    "module": "CommonJS",
+    "target": "ES2018",
+    "strict": true,
+    "noImplicitAny": false,
+    "lib": ["ES2018"],
+    "types": ["miniprogram-api-typings"],
+    "skipLibCheck": true,
+    "moduleResolution": "node",
+    "rootDir": ".",
+    "outDir": "."
+  },
+  "include": ["app.ts", "pages/**/*.ts", "utils/**/*.ts"],
+  "exclude": ["node_modules"]
+}

@@ -1,0 +1,27 @@
+@import '../add/add.wxss';
+
+.actions {
+  display: flex;
+  gap: 24rpx;
+  margin: 0 24rpx;
+  align-items: stretch;
+}
+
+.btn-del {
+  flex: 1;
+  background: #fff;
+  color: #c45c3e;
+  border: 1rpx solid #e8b4a8;
+  border-radius: 12rpx;
+  font-size: 30rpx;
+  padding: 22rpx 32rpx;
+}
+
+.btn-del::after {
+  border: none;
+}
+
+.save {
+  flex: 2;
+  margin: 0;
+}

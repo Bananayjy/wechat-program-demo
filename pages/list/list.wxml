@@ -1,0 +1,41 @@
+<view class="page safe-bottom">
+  <view class="toolbar card">
+    <picker
+      mode="selector"
+      range="{{filterLabels}}"
+      value="{{filterIndex}}"
+      bindchange="onFilterChange"
+    >
+      <view class="filter-line">
+        <text>分类筛选</text>
+        <text class="filter-val">{{filterLabels[filterIndex]}}</text>
+      </view>
+    </picker>
+  </view>
+
+  <block wx:if="{{groups.length === 0}}">
+    <view class="empty text-muted">暂无记录，去首页记一笔吧</view>
+  </block>
+
+  <block wx:for="{{groups}}" wx:key="dateKey" wx:for-item="g">
+    <view class="day-title">{{g.dateLabel}}</view>
+    <view class="card list-card">
+      <view
+        wx:for="{{g.items}}"
+        wx:key="id"
+        wx:for-item="row"
+        class="row"
+        data-id="{{row.id}}"
+        bindtap="onRowTap"
+      >
+        <view class="row-left">
+          <text class="cat-name">{{row.categoryName}}</text>
+          <text class="note text-muted" wx:if="{{row.note}}">{{row.note}}</text>
+        </view>
+        <text class="{{row.type === 'income' ? 'amount-income' : 'amount-expense'}} row-amt">
+          {{row.type === 'income' ? '+' : '-'}}{{row.amountYuan}}
+        </text>
+      </view>
+    </view>
+  </block>
+</view>

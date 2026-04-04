@@ -1,0 +1,60 @@
+<view class="page safe-bottom">
+  <view class="card">
+    <view class="seg">
+      <view
+        class="seg-item {{txType === 'expense' ? 'on' : ''}}"
+        data-type="expense"
+        bindtap="onTypeTap"
+      >支出</view>
+      <view
+        class="seg-item {{txType === 'income' ? 'on' : ''}}"
+        data-type="income"
+        bindtap="onTypeTap"
+      >收入</view>
+    </view>
+
+    <view class="field">
+      <text class="label">金额（元）</text>
+      <input
+        class="input amount"
+        type="digit"
+        placeholder="0.00"
+        value="{{amountYuan}}"
+        bindinput="onAmountInput"
+      />
+    </view>
+
+    <view class="field">
+      <text class="label">分类</text>
+      <scroll-view scroll-x class="cat-scroll" enable-flex>
+        <view
+          wx:for="{{filteredCategories}}"
+          wx:key="id"
+          class="chip {{categoryId === item.id ? 'on' : ''}}"
+          data-id="{{item.id}}"
+          bindtap="onCategoryTap"
+        >{{item.name}}</view>
+      </scroll-view>
+    </view>
+
+    <view class="field">
+      <text class="label">日期</text>
+      <picker mode="date" value="{{dateStr}}" bindchange="onDateChange">
+        <view class="picker-val">{{dateStr}}</view>
+      </picker>
+    </view>
+
+    <view class="field">
+      <text class="label">备注</text>
+      <input
+        class="input"
+        placeholder="可选"
+        value="{{note}}"
+        maxlength="80"
+        bindinput="onNoteInput"
+      />
+    </view>
+  </view>
+
+  <button class="btn-primary save" bindtap="onSave">保存</button>
+</view>

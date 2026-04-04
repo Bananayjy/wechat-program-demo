@@ -1,0 +1,51 @@
+{
+  "pages": [
+    "pages/index/index",
+    "pages/add/add",
+    "pages/list/list",
+    "pages/stats/stats",
+    "pages/mine/mine",
+    "pages/category-edit/category-edit",
+    "pages/transaction-edit/transaction-edit"
+  ],
+  "window": {
+    "navigationBarTitleText": "日常记账",
+    "navigationBarBackgroundColor": "#1a7f5a",
+    "navigationBarTextStyle": "white",
+    "backgroundColor": "#f5f6f8"
+  },
+  "tabBar": {
+    "color": "#8a8a8a",
+    "selectedColor": "#1a7f5a",
+    "backgroundColor": "#ffffff",
+    "borderStyle": "black",
+    "list": [
+      {
+        "pagePath": "pages/index/index",
+        "text": "首页",
+        "iconPath": "assets/tab-home.png",
+        "selectedIconPath": "assets/tab-home-active.png"
+      },
+      {
+        "pagePath": "pages/list/list",
+        "text": "流水",
+        "iconPath": "assets/tab-list.png",
+        "selectedIconPath": "assets/tab-list-active.png"
+      },
+      {
+        "pagePath": "pages/stats/stats",
+        "text": "统计",
+        "iconPath": "assets/tab-chart.png",
+        "selectedIconPath": "assets/tab-chart-active.png"
+      },
+      {
+        "pagePath": "pages/mine/mine",
+        "text": "我的",
+        "iconPath": "assets/tab-user.png",
+        "selectedIconPath": "assets/tab-user-active.png"
+      }
+    ]
+  },
+  "style": "v2",
+  "sitemapLocation": "sitemap.json"
+}

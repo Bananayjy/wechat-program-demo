@@ -1,0 +1,31 @@
+<view class="page safe-bottom">
+  <view class="hero card">
+    <text class="hero-title">今日概览</text>
+    <view class="hero-row">
+      <view>
+        <text class="text-muted">收入</text>
+        <view class="amount-income hero-amount">¥{{todayIncome}}</view>
+      </view>
+      <view>
+        <text class="text-muted">支出</text>
+        <view class="amount-expense hero-amount">¥{{todayExpense}}</view>
+      </view>
+    </view>
+  </view>
+
+  <view class="card month-card">
+    <text class="hero-title">本月</text>
+    <view class="hero-row">
+      <view>
+        <text class="text-muted">收入</text>
+        <view class="amount-income hero-amount small">¥{{monthIncome}}</view>
+      </view>
+      <view>
+        <text class="text-muted">支出</text>
+        <view class="amount-expense hero-amount small">¥{{monthExpense}}</view>
+      </view>
+    </view>
+  </view>
+
+  <button class="btn-primary fab" bindtap="goAdd">记一笔</button>
+</view>

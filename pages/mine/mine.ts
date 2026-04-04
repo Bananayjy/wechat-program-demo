@@ -1,0 +1,95 @@
+import { transactionsToCsv } from '../../utils/export';
+import {
+  loadCategories,
+  loadSyncConfig,
+  loadTransactions,
+  saveSyncConfig,
+} from '../../utils/storage';
+import { pullFromRemote, pushToRemote, validateSyncConfig } from '../../utils/sync';
+
+Page({
+  data: {
+    apiBase: '',
+    syncEnabled: false,
+  },
+
+  onShow() {
+    const c = loadSyncConfig();
+    this.setData({
+      apiBase: c.apiBase,
+      syncEnabled: c.enabled,
+    });
+  },
+
+  goCategories() {
+    wx.navigateTo({ url: '/pages/category-edit/category-edit' });
+  },
+
+  onExport() {
+    const txs = loadTransactions().sort((a, b) => b.occurredAt - a.occurredAt);
+    const cats = loadCategories();
+    const csv = transactionsToCsv(txs, cats);
+    const fs = wx.getFileSystemManager();
+    const path = `${wx.env.USER_DATA_PATH}/accountbook_export.txt`;
+    try {
+      fs.writeFileSync(path, csv, 'utf8');
+      wx.openDocument({
+        filePath: path,
+        showMenu: true,
+        success: () => {
+          wx.showToast({ title: '可通过右上角菜单分享', icon: 'none' });
+        },
+        fail: () => {
+          wx.setClipboardData({
+            data: csv.slice(0, 5000),
+            success: () => {
+              wx.showModal({
+                title: '导出',
+                content: '文件打开失败，已复制部分 CSV 到剪贴板，可粘贴到备忘录。',
+                showCancel: false,
+              });
+            },
+          });
+        },
+      });
+    } catch {
+      wx.showToast({ title: '写入失败', icon: 'none' });
+    }
+  },
+
+  onApiBaseInput(e: WechatMiniprogram.Input) {
+    this.setData({ apiBase: e.detail.value });
+  },
+
+  onSyncSwitch(e: WechatMiniprogram.SwitchChange) {
+    this.setData({ syncEnabled: e.detail.value });
+  },
+
+  onSaveSync() {
+    const c = {
+      apiBase: this.data.apiBase.trim(),
+      enabled: this.data.syncEnabled,
+    };
+    const err = validateSyncConfig(c);
+    if (err) {
+      wx.showToast({ title: err, icon: 'none' });
+      return;
+    }
+    saveSyncConfig(c);
+    wx.showToast({ title: '已保存', icon: 'success' });
+  },
+
+  async onPush() {
+    wx.showLoading({ title: '上传中' });
+    const r = await pushToRemote();
+    wx.hideLoading();
+    wx.showToast({ title: r.message, icon: r.ok ? 'success' : 'none' });
+  },
+
+  async onPull() {
+    wx.showLoading({ title: '拉取中' });
+    const r = await pullFromRemote();
+    wx.hideLoading();
+    wx.showToast({ title: r.message, icon: r.ok ? 'success' : 'none' });
+  },
+});

@@ -1,0 +1,54 @@
+<view class="page safe-bottom">
+  <view class="card add-bar">
+    <view class="seg small">
+      <view
+        class="seg-item {{newType === 'expense' ? 'on' : ''}}"
+        data-type="expense"
+        bindtap="onNewType"
+      >支出</view>
+      <view
+        class="seg-item {{newType === 'income' ? 'on' : ''}}"
+        data-type="income"
+        bindtap="onNewType"
+      >收入</view>
+    </view>
+    <view class="add-row">
+      <input
+        class="input"
+        placeholder="新分类名称"
+        value="{{newName}}"
+        maxlength="12"
+        bindinput="onNewNameInput"
+      />
+      <button class="btn-mini" bindtap="onAdd">添加</button>
+    </view>
+  </view>
+
+  <view class="card">
+    <text class="section-title">支出</text>
+    <view
+      wx:for="{{expenseList}}"
+      wx:key="id"
+      class="cat-row"
+    >
+      <text>{{item.name}}</text>
+      <text class="link" data-id="{{item.id}}" bindtap="onEdit">改</text>
+      <text class="link danger" data-id="{{item.id}}" bindtap="onRemove">删</text>
+    </view>
+  </view>
+
+  <view class="card">
+    <text class="section-title">收入</text>
+    <view
+      wx:for="{{incomeList}}"
+      wx:key="id"
+      class="cat-row"
+    >
+      <text>{{item.name}}</text>
+      <text class="link" data-id="{{item.id}}" bindtap="onEdit">改</text>
+      <text class="link danger" data-id="{{item.id}}" bindtap="onRemove">删</text>
+    </view>
+  </view>
+
+  <view class="text-muted tip">有流水引用的分类不可删除</view>
+</view>

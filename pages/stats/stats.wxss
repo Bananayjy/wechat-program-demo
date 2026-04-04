@@ -1,0 +1,82 @@
+.page {
+  padding: 24rpx 0 48rpx;
+  min-height: 100vh;
+}
+
+.month-line {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  font-size: 28rpx;
+  margin-bottom: 24rpx;
+}
+
+.month-val {
+  color: #1a7f5a;
+  font-weight: 600;
+}
+
+.sum-row {
+  display: flex;
+  justify-content: space-between;
+  gap: 32rpx;
+}
+
+.sum-amt {
+  font-size: 36rpx;
+  font-weight: 600;
+  margin-top: 8rpx;
+}
+
+.block-title {
+  font-weight: 600;
+  margin-bottom: 20rpx;
+  display: block;
+  font-size: 28rpx;
+}
+
+.bar-row {
+  display: flex;
+  align-items: center;
+  margin-bottom: 20rpx;
+  gap: 12rpx;
+}
+
+.bar-name {
+  width: 120rpx;
+  font-size: 24rpx;
+  flex-shrink: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.bar-track {
+  flex: 1;
+  height: 16rpx;
+  background: #eef0f3;
+  border-radius: 999rpx;
+  overflow: hidden;
+}
+
+.bar-fill {
+  height: 100%;
+  border-radius: 999rpx;
+  min-width: 4rpx;
+}
+
+.bar-fill.expense {
+  background: linear-gradient(90deg, #e8a090, #c45c3e);
+}
+
+.bar-fill.income {
+  background: linear-gradient(90deg, #6bc49a, #1a7f5a);
+}
+
+.bar-amt {
+  width: 100rpx;
+  text-align: right;
+  font-size: 22rpx;
+  color: #666;
+  flex-shrink: 0;
+}
