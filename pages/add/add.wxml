@@ -53,7 +53,6 @@
       />
     </view>
 
-    <view class="calc-hint">点点小键盘输入～</view>
       <view class="calc">
         <view class="calc-row">
           <view class="calc-key" data-key="7" bindtap="onCalcKey">7</view>

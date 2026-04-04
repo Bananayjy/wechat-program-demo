@@ -22,6 +22,10 @@ Page({
     });
   },
 
+  goLedgerManage() {
+    wx.navigateTo({ url: '/pages/ledger-manage/ledger-manage' });
+  },
+
   goCategories() {
     wx.navigateTo({ url: '/pages/category-edit/category-edit' });
   },
@@ -56,7 +60,7 @@ Page({
         filePath: path,
         showMenu: true,
         success: () => {
-          wx.showToast({ title: '可通过右上角菜单分享', icon: 'none' });
+          wx.showToast({ title: '当前账本，可通过右上角菜单分享', icon: 'none' });
         },
         fail: () => {
           wx.setClipboardData({

@@ -9,9 +9,7 @@ function monthKeyFromTs(ts) {
     return `${y}-${m}`;
 }
 function monthLabelFromKey(key) {
-    const parts = key.split('-').map(Number);
-    const y = parts[0];
-    const m = parts[1];
+    const [y, m] = key.split('-').map(Number);
     return `${y}年${m}月`;
 }
 function uniqueMonthKeysFromTxs(txs) {
@@ -23,6 +21,9 @@ function uniqueMonthKeysFromTxs(txs) {
 }
 Page({
     data: {
+        ledgerNames: [],
+        ledgerIndex: 0,
+        ledgerDisplay: '',
         typeIndex: 0,
         typeLabelDisplay: '全部',
         filterLabelDisplay: '全部',
@@ -38,15 +39,42 @@ Page({
         monthGroups: [],
     },
     onShow() {
+        this.syncLedgerPicker();
         this.buildList();
     },
+    syncLedgerPicker() {
+        var _a;
+        const ledgers = (0, storage_1.loadLedgers)();
+        const names = ledgers.map((l) => l.name);
+        const cur = (0, storage_1.getCurrentBookId)();
+        let ledgerIndex = ledgers.findIndex((l) => l.id === cur);
+        if (ledgerIndex < 0)
+            ledgerIndex = 0;
+        const ledgerDisplay = (_a = names[ledgerIndex]) !== null && _a !== void 0 ? _a : '';
+        this.setData({ ledgerNames: names, ledgerIndex, ledgerDisplay });
+    },
+    onLedgerChange(e) {
+        const idx = Number(e.detail.value);
+        const ledgers = (0, storage_1.loadLedgers)();
+        const l = ledgers[idx];
+        if (!l)
+            return;
+        (0, storage_1.setCurrentBookId)(l.id);
+        this.setData({
+            ledgerIndex: idx,
+            ledgerDisplay: l.name,
+        }, () => {
+            this.buildList();
+        });
+    },
     onTypeSegmentTap(e) {
+        var _a;
         const raw = e.currentTarget.dataset.index;
         const idx = typeof raw === 'number' ? raw : Number(raw);
         if (idx < 0 || idx > 2 || Number.isNaN(idx))
             return;
         const types = ['all', 'income', 'expense'];
-        this.setData({ typeIndex: idx, filterType: types[idx] ?? 'all' }, () => {
+        this.setData({ typeIndex: idx, filterType: (_a = types[idx]) !== null && _a !== void 0 ? _a : 'all' }, () => {
             this.buildList();
         });
     },
@@ -60,14 +88,16 @@ Page({
         });
     },
     onMonthFilterChange(e) {
+        var _a;
         const idx = Number(e.detail.value);
         const keys = this.data.monthFilterKeys;
-        const k = keys[idx] ?? '';
+        const k = (_a = keys[idx]) !== null && _a !== void 0 ? _a : '';
         this.setData({ monthFilterIndex: idx, filterMonth: k }, () => {
             this.buildList();
         });
     },
     buildList() {
+        var _a, _b, _c;
         const cats = (0, storage_1.loadCategories)();
         const labels = ['全部', ...cats.map((c) => `${c.name}(${c.type === 'income' ? '收' : '支'})`)];
         const catMap = new Map(cats.map((c) => [c.id, c.name]));
@@ -110,8 +140,9 @@ Page({
             if (!groupMap.has(dk))
                 groupMap.set(dk, []);
             groupMap.get(dk).push(row);
-            if (!daySumFen.has(dk))
+            if (!daySumFen.has(dk)) {
                 daySumFen.set(dk, { incomeFen: 0, expenseFen: 0 });
+            }
             const s = daySumFen.get(dk);
             if (t.type === 'income')
                 s.incomeFen += t.amountFen;
@@ -171,9 +202,9 @@ Page({
             filterLabels: labels,
             filterIndex,
             typeIndex,
-            typeLabelDisplay: typeLabelsConst[typeIndex] ?? '全部',
-            filterLabelDisplay: labels[filterIndex] ?? '全部',
-            monthFilterDisplay: monthFilterLabels[monthFilterIndex] ?? '全部时间',
+            typeLabelDisplay: (_a = typeLabelsConst[typeIndex]) !== null && _a !== void 0 ? _a : '全部',
+            filterLabelDisplay: (_b = labels[filterIndex]) !== null && _b !== void 0 ? _b : '全部',
+            monthFilterDisplay: (_c = monthFilterLabels[monthFilterIndex]) !== null && _c !== void 0 ? _c : '全部时间',
             monthGroups,
         });
     },
@@ -181,7 +212,7 @@ Page({
         const key = e.currentTarget.dataset.key;
         if (!key)
             return;
-        const monthGroups = this.data.monthGroups.map((m) => (m.monthKey === key ? { ...m, expanded: !m.expanded } : m));
+        const monthGroups = this.data.monthGroups.map((m) => m.monthKey === key ? { ...m, expanded: !m.expanded } : m);
         this.setData({ monthGroups });
     },
     onRowTap(e) {

@@ -1,4 +1,17 @@
 <view class="page safe-bottom">
+  <view class="card ledger-card-stats">
+    <picker
+      mode="selector"
+      range="{{ledgerNames}}"
+      value="{{ledgerIndex}}"
+      bindchange="onLedgerChange"
+    >
+      <view class="ledger-line-stats">
+        <text class="ledger-label-stats">账本</text>
+        <text class="ledger-val-stats">{{ledgerDisplay}}</text>
+      </view>
+    </picker>
+  </view>
   <view class="card">
     <picker mode="date" fields="month" value="{{monthStr}}" bindchange="onMonthChange">
       <view class="month-line">

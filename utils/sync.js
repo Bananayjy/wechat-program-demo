@@ -14,11 +14,7 @@ function pushToRemote() {
         return Promise.resolve({ ok: false, message: '未启用同步或未配置站点地址' });
     }
     const url = joinApi(cfg.apiBase, '/accountbook/sync');
-    const body = {
-        categories: (0, storage_1.loadCategories)(),
-        transactions: (0, storage_1.loadTransactions)(),
-        clientTime: Date.now(),
-    };
+    const body = (0, storage_1.buildFullSyncPayload)();
     return new Promise((resolve) => {
         wx.request({
             url,
@@ -50,18 +46,33 @@ function pullFromRemote() {
             url,
             method: 'GET',
             success: (res) => {
+                var _a, _b;
                 if (res.statusCode < 200 || res.statusCode >= 300) {
                     resolve({ ok: false, message: `拉取失败 ${res.statusCode}` });
                     return;
                 }
                 const data = res.data;
-                if (data.categories && Array.isArray(data.categories)) {
-                    (0, storage_1.saveCategories)(data.categories);
+                if (data.ledgers && Array.isArray(data.ledgers) && data.books && Array.isArray(data.books)) {
+                    (0, storage_1.applyFullSyncPayload)({
+                        ledgers: data.ledgers,
+                        books: data.books,
+                        clientTime: (_a = data.clientTime) !== null && _a !== void 0 ? _a : Date.now(),
+                    });
+                    resolve({ ok: true, message: '已拉取并合并' });
+                    return;
                 }
-                if (data.transactions && Array.isArray(data.transactions)) {
-                    (0, storage_1.saveTransactions)(data.transactions);
+                if (data.categories && Array.isArray(data.categories) && data.transactions && Array.isArray(data.transactions)) {
+                    const bid = (0, storage_1.getCurrentBookId)();
+                    const ledgers = (0, storage_1.loadLedgers)();
+                    const target = ledgers.some((l) => l.id === bid) ? bid : (_b = ledgers[0]) === null || _b === void 0 ? void 0 : _b.id;
+                    if (target) {
+                        (0, storage_1.saveCategoriesForBook)(target, data.categories);
+                        (0, storage_1.saveTransactionsForBook)(target, data.transactions);
+                    }
+                    resolve({ ok: true, message: '已拉取并合并（旧版格式，仅当前账本）' });
+                    return;
                 }
-                resolve({ ok: true, message: '已拉取并合并' });
+                resolve({ ok: false, message: '数据格式无效' });
             },
             fail: (err) => {
                 resolve({ ok: false, message: err.errMsg || '网络错误' });

@@ -1,6 +1,12 @@
 import type { Transaction } from '../../utils/types';
 import { fenToYuan, formatDate } from '../../utils/format';
-import { loadCategories, loadTransactions } from '../../utils/storage';
+import {
+  getCurrentBookId,
+  loadCategories,
+  loadLedgers,
+  loadTransactions,
+  setCurrentBookId,
+} from '../../utils/storage';
 
 interface RowVM {
   id: string;
@@ -49,6 +55,9 @@ function uniqueMonthKeysFromTxs(txs: Transaction[]): string[] {
 
 Page({
   data: {
+    ledgerNames: [] as string[],
+    ledgerIndex: 0,
+    ledgerDisplay: '',
     typeIndex: 0,
     typeLabelDisplay: '全部',
     filterLabelDisplay: '全部',
@@ -65,7 +74,35 @@ Page({
   },
 
   onShow() {
+    this.syncLedgerPicker();
     this.buildList();
+  },
+
+  syncLedgerPicker() {
+    const ledgers = loadLedgers();
+    const names = ledgers.map((l) => l.name);
+    const cur = getCurrentBookId();
+    let ledgerIndex = ledgers.findIndex((l) => l.id === cur);
+    if (ledgerIndex < 0) ledgerIndex = 0;
+    const ledgerDisplay = names[ledgerIndex] ?? '';
+    this.setData({ ledgerNames: names, ledgerIndex, ledgerDisplay });
+  },
+
+  onLedgerChange(e: WechatMiniprogram.PickerChange) {
+    const idx = Number(e.detail.value);
+    const ledgers = loadLedgers();
+    const l = ledgers[idx];
+    if (!l) return;
+    setCurrentBookId(l.id);
+    this.setData(
+      {
+        ledgerIndex: idx,
+        ledgerDisplay: l.name,
+      },
+      () => {
+        this.buildList();
+      }
+    );
   },
 
   onTypeSegmentTap(e: WechatMiniprogram.TouchEvent) {

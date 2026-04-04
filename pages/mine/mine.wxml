@@ -1,4 +1,9 @@
 <view class="page safe-bottom">
+  <view class="card cell" bindtap="goLedgerManage">
+    <text>账本管理</text>
+    <text class="chev">›</text>
+  </view>
+
   <view class="card cell" bindtap="goCategories">
     <text>分类管理</text>
     <text class="chev">›</text>

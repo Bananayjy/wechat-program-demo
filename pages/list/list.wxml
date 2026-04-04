@@ -1,4 +1,17 @@
 <view class="page safe-bottom">
+  <view class="toolbar card ledger-card">
+    <picker
+      mode="selector"
+      range="{{ledgerNames}}"
+      value="{{ledgerIndex}}"
+      bindchange="onLedgerChange"
+    >
+      <view class="ledger-line">
+        <text class="ledger-label">账本</text>
+        <text class="ledger-val">{{ledgerDisplay}}</text>
+      </view>
+    </picker>
+  </view>
   <view class="toolbar card filter-card">
     <view class="filter-seg-wrap">
       <text class="filter-seg-label">收支</text>

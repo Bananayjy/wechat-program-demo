@@ -1,7 +1,7 @@
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
 const format_1 = require("../../utils/format");
-const storage_1 = require("../../utils/storage");
+/** 计算器按键拼接金额，与 yuanInputToFen 上限一致 */
 function appendCalcKey(amountYuan, key) {
     let s = amountYuan;
     if (key === 'clear')
@@ -28,6 +28,7 @@ function appendCalcKey(amountYuan, key) {
         return s;
     return next;
 }
+const storage_1 = require("../../utils/storage");
 Page({
     data: {
         txType: 'expense',
@@ -41,6 +42,9 @@ Page({
         const d = new Date();
         this.setData({ dateStr: (0, format_1.formatDate)(d.getTime()) });
         this.applyCategories('expense');
+    },
+    onShow() {
+        this.applyCategories(this.data.txType);
     },
     onTypeTap(e) {
         const type = e.currentTarget.dataset.type;

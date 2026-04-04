@@ -38,6 +38,10 @@ Page({
     this.applyCategories('expense');
   },
 
+  onShow() {
+    this.applyCategories(this.data.txType);
+  },
+
   onTypeTap(e: WechatMiniprogram.TouchEvent) {
     const type = e.currentTarget.dataset.type as TxType;
     if (!type) return;

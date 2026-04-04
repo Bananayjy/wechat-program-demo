@@ -7,6 +7,34 @@
   margin-bottom: 12rpx;
 }
 
+.ledger-card {
+  padding: 0;
+  margin-bottom: 12rpx;
+}
+
+.ledger-line {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 22rpx 28rpx;
+  font-size: 28rpx;
+  color: #6b5a4a;
+}
+
+.ledger-label {
+  font-weight: 700;
+  color: #8b7a58;
+}
+
+.ledger-val {
+  color: #d48c00;
+  font-weight: 600;
+  max-width: 70%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
 .filter-card {
   padding: 8rpx 0;
 }

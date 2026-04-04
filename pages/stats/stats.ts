@@ -1,5 +1,11 @@
 import { fenToYuan } from '../../utils/format';
-import { loadCategories, loadTransactions } from '../../utils/storage';
+import {
+  getCurrentBookId,
+  loadCategories,
+  loadLedgers,
+  loadTransactions,
+  setCurrentBookId,
+} from '../../utils/storage';
 
 interface BarVM {
   id: string;
@@ -17,6 +23,9 @@ function monthRange(ym: string): { start: number; end: number } {
 
 Page({
   data: {
+    ledgerNames: [] as string[],
+    ledgerIndex: 0,
+    ledgerDisplay: '',
     monthStr: '',
     incomeYuan: '0.00',
     expenseYuan: '0.00',
@@ -30,7 +39,35 @@ Page({
       const ms = `${d.getFullYear()}-${`${d.getMonth() + 1}`.padStart(2, '0')}`;
       this.setData({ monthStr: ms });
     }
+    this.syncLedgerPicker();
     this.compute();
+  },
+
+  syncLedgerPicker() {
+    const ledgers = loadLedgers();
+    const names = ledgers.map((l) => l.name);
+    const cur = getCurrentBookId();
+    let ledgerIndex = ledgers.findIndex((l) => l.id === cur);
+    if (ledgerIndex < 0) ledgerIndex = 0;
+    const ledgerDisplay = names[ledgerIndex] ?? '';
+    this.setData({ ledgerNames: names, ledgerIndex, ledgerDisplay });
+  },
+
+  onLedgerChange(e: WechatMiniprogram.PickerChange) {
+    const idx = Number(e.detail.value);
+    const ledgers = loadLedgers();
+    const l = ledgers[idx];
+    if (!l) return;
+    setCurrentBookId(l.id);
+    this.setData(
+      {
+        ledgerIndex: idx,
+        ledgerDisplay: l.name,
+      },
+      () => {
+        this.compute();
+      }
+    );
   },
 
   onMonthChange(e: WechatMiniprogram.PickerChange) {

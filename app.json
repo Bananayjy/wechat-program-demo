@@ -5,6 +5,7 @@
     "pages/list/list",
     "pages/stats/stats",
     "pages/mine/mine",
+    "pages/ledger-manage/ledger-manage",
     "pages/category-edit/category-edit",
     "pages/transaction-edit/transaction-edit"
   ],

@@ -1,6 +1,12 @@
 import { fenToYuan } from '../../utils/format';
 import type { Transaction } from '../../utils/types';
-import { loadCategories, loadTransactions } from '../../utils/storage';
+import {
+  getCurrentBookId,
+  loadCategoriesForBook,
+  loadLedgers,
+  loadTransactionsForBook,
+  setCurrentBookId,
+} from '../../utils/storage';
 
 function startOfDay(ts: number): number {
   const d = new Date(ts);
@@ -19,6 +25,19 @@ interface RankRow {
   id: string;
   name: string;
   amount: string;
+}
+
+interface BookSlideVM {
+  bookId: string;
+  bookName: string;
+  todayIncome: string;
+  todayExpense: string;
+  monthIncome: string;
+  monthExpense: string;
+  todayRankIncome: RankRow[];
+  todayRankExpense: RankRow[];
+  monthRankIncome: RankRow[];
+  monthRankExpense: RankRow[];
 }
 
 function top3ByCategory(
@@ -48,16 +67,48 @@ function top3ByCategory(
     }));
 }
 
+function buildSlideForBook(bookId: string, bookName: string, now: number): BookSlideVM {
+  const dayStart = startOfDay(now);
+  const monthStart = startOfMonth(now);
+  const txs = loadTransactionsForBook(bookId);
+  const cats = loadCategoriesForBook(bookId);
+  const catName = new Map(cats.map((c) => [c.id, c.name]));
+
+  let ti = 0;
+  let te = 0;
+  let mi = 0;
+  let me = 0;
+  for (const t of txs) {
+    if (t.occurredAt < monthStart) continue;
+    if (t.type === 'income') mi += t.amountFen;
+    else me += t.amountFen;
+    if (t.occurredAt >= dayStart) {
+      if (t.type === 'income') ti += t.amountFen;
+      else te += t.amountFen;
+    }
+  }
+
+  const dayInRange = (t: Transaction) => t.occurredAt >= dayStart;
+  const monthInRange = (t: Transaction) => t.occurredAt >= monthStart;
+
+  return {
+    bookId,
+    bookName,
+    todayIncome: fenToYuan(ti),
+    todayExpense: fenToYuan(te),
+    monthIncome: fenToYuan(mi),
+    monthExpense: fenToYuan(me),
+    todayRankIncome: top3ByCategory(txs, catName, dayInRange, 'income'),
+    todayRankExpense: top3ByCategory(txs, catName, dayInRange, 'expense'),
+    monthRankIncome: top3ByCategory(txs, catName, monthInRange, 'income'),
+    monthRankExpense: top3ByCategory(txs, catName, monthInRange, 'expense'),
+  };
+}
+
 Page({
   data: {
-    todayIncome: '0.00',
-    todayExpense: '0.00',
-    monthIncome: '0.00',
-    monthExpense: '0.00',
-    todayRankIncome: [] as RankRow[],
-    todayRankExpense: [] as RankRow[],
-    monthRankIncome: [] as RankRow[],
-    monthRankExpense: [] as RankRow[],
+    bookSlides: [] as BookSlideVM[],
+    bookSwiperIndex: 0,
   },
 
   onShow() {
@@ -66,39 +117,19 @@ Page({
 
   refresh() {
     const now = Date.now();
-    const dayStart = startOfDay(now);
-    const monthStart = startOfMonth(now);
-    const txs = loadTransactions();
-    const cats = loadCategories();
-    const catName = new Map(cats.map((c) => [c.id, c.name]));
+    const ledgers = loadLedgers();
+    const bookSlides = ledgers.map((l) => buildSlideForBook(l.id, l.name, now));
+    const cur = getCurrentBookId();
+    let bookSwiperIndex = bookSlides.findIndex((b) => b.bookId === cur);
+    if (bookSwiperIndex < 0) bookSwiperIndex = 0;
+    this.setData({ bookSlides, bookSwiperIndex });
+  },
 
-    let ti = 0;
-    let te = 0;
-    let mi = 0;
-    let me = 0;
-    for (const t of txs) {
-      if (t.occurredAt < monthStart) continue;
-      if (t.type === 'income') mi += t.amountFen;
-      else me += t.amountFen;
-      if (t.occurredAt >= dayStart) {
-        if (t.type === 'income') ti += t.amountFen;
-        else te += t.amountFen;
-      }
-    }
-
-    const dayInRange = (t: Transaction) => t.occurredAt >= dayStart;
-    const monthInRange = (t: Transaction) => t.occurredAt >= monthStart;
-
-    this.setData({
-      todayIncome: fenToYuan(ti),
-      todayExpense: fenToYuan(te),
-      monthIncome: fenToYuan(mi),
-      monthExpense: fenToYuan(me),
-      todayRankIncome: top3ByCategory(txs, catName, dayInRange, 'income'),
-      todayRankExpense: top3ByCategory(txs, catName, dayInRange, 'expense'),
-      monthRankIncome: top3ByCategory(txs, catName, monthInRange, 'income'),
-      monthRankExpense: top3ByCategory(txs, catName, monthInRange, 'expense'),
-    });
+  onBookSwiperChange(e: WechatMiniprogram.SwiperChange) {
+    const idx = e.detail.current;
+    const slides = this.data.bookSlides;
+    const id = slides[idx]?.bookId;
+    if (id) setCurrentBookId(id);
   },
 
   goAdd() {

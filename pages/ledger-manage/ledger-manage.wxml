@@ -1,0 +1,27 @@
+<scroll-view class="page-scroll" scroll-y>
+  <view class="grid">
+    <view class="tile" wx:for="{{tiles}}" wx:key="id">
+      <view class="tile-cover-wrap" bindtap="onPickCover" data-id="{{item.id}}">
+        <image wx:if="{{item.cover}}" class="tile-cover" src="{{item.cover}}" mode="aspectFill" />
+        <view wx:else class="tile-cover tile-cover-empty">
+          <text class="cover-plus">+</text>
+          <text class="cover-hint">封面</text>
+        </view>
+      </view>
+      <text class="tile-name" bindtap="onRename" data-id="{{item.id}}">{{item.name}}</text>
+      <view
+        wx:if="{{item.canDelete}}"
+        class="tile-del"
+        catchtap="onDeleteLedger"
+        data-id="{{item.id}}"
+      >×</view>
+    </view>
+
+    <view class="tile tile-add" bindtap="onAddLedger">
+      <view class="tile-add-inner">
+        <text class="add-plus">+</text>
+        <text class="add-label">新增账本</text>
+      </view>
+    </view>
+  </view>
+</scroll-view>

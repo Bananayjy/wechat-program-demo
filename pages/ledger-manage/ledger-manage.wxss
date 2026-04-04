@@ -1,0 +1,117 @@
+.page-scroll {
+  height: 100vh;
+  box-sizing: border-box;
+  padding: 24rpx 20rpx 48rpx;
+  background: #fffbea;
+}
+
+.grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 20rpx;
+}
+
+.tile {
+  position: relative;
+  border-radius: 16rpx;
+  overflow: hidden;
+  background: #fff;
+  box-shadow: 0 4rpx 20rpx rgba(255, 193, 7, 0.18);
+}
+
+.tile-cover-wrap {
+  width: 100%;
+  aspect-ratio: 1;
+  display: block;
+}
+
+.tile-cover {
+  width: 100%;
+  height: 100%;
+  display: block;
+  background: #f5edd8;
+}
+
+.tile-cover-empty {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  background: linear-gradient(160deg, rgba(255, 224, 130, 0.35) 0%, rgba(255, 248, 230, 0.95) 100%);
+  border: 2rpx dashed rgba(212, 140, 0, 0.35);
+  box-sizing: border-box;
+}
+
+.cover-plus {
+  font-size: 56rpx;
+  font-weight: 300;
+  color: #d48c00;
+  line-height: 1.2;
+}
+
+.cover-hint {
+  font-size: 22rpx;
+  color: #b8a078;
+  margin-top: 8rpx;
+}
+
+.tile-name {
+  display: block;
+  font-size: 24rpx;
+  font-weight: 600;
+  color: #5c4a42;
+  padding: 12rpx 10rpx 14rpx;
+  text-align: center;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.tile-del {
+  position: absolute;
+  top: 6rpx;
+  right: 6rpx;
+  width: 44rpx;
+  height: 44rpx;
+  line-height: 40rpx;
+  text-align: center;
+  font-size: 36rpx;
+  font-weight: 300;
+  color: #fff;
+  background: rgba(196, 92, 80, 0.92);
+  border-radius: 50%;
+  z-index: 2;
+}
+
+.tile-add {
+  min-height: 0;
+  aspect-ratio: 1;
+  display: flex;
+  align-items: stretch;
+  border: 2rpx dashed rgba(212, 140, 0, 0.4);
+  background: rgba(255, 255, 255, 0.65);
+  box-shadow: none;
+}
+
+.tile-add-inner {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 16rpx;
+}
+
+.add-plus {
+  font-size: 64rpx;
+  font-weight: 300;
+  color: #d48c00;
+  line-height: 1.1;
+}
+
+.add-label {
+  font-size: 22rpx;
+  color: #a89878;
+  margin-top: 10rpx;
+  font-weight: 600;
+}

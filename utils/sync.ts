@@ -1,9 +1,12 @@
 import {
-  loadCategories,
+  applyFullSyncPayload,
+  buildFullSyncPayload,
+  getCurrentBookId,
+  loadLedgers,
   loadSyncConfig,
-  loadTransactions,
-  saveCategories,
-  saveTransactions,
+  saveCategoriesForBook,
+  saveTransactionsForBook,
+  type AccountBookSyncPayload,
   type SyncConfig,
 } from './storage';
 import type { Category, Transaction } from './types';
@@ -18,11 +21,7 @@ export function pushToRemote(): Promise<{ ok: boolean; message: string }> {
     return Promise.resolve({ ok: false, message: '未启用同步或未配置站点地址' });
   }
   const url = joinApi(cfg.apiBase, '/accountbook/sync');
-  const body = {
-    categories: loadCategories(),
-    transactions: loadTransactions(),
-    clientTime: Date.now(),
-  };
+  const body: AccountBookSyncPayload = buildFullSyncPayload();
   return new Promise((resolve) => {
     wx.request({
       url,
@@ -58,17 +57,31 @@ export function pullFromRemote(): Promise<{ ok: boolean; message: string }> {
           resolve({ ok: false, message: `拉取失败 ${res.statusCode}` });
           return;
         }
-        const data = res.data as {
+        const data = res.data as AccountBookSyncPayload & {
           categories?: Category[];
           transactions?: Transaction[];
         };
-        if (data.categories && Array.isArray(data.categories)) {
-          saveCategories(data.categories);
+        if (data.ledgers && Array.isArray(data.ledgers) && data.books && Array.isArray(data.books)) {
+          applyFullSyncPayload({
+            ledgers: data.ledgers,
+            books: data.books,
+            clientTime: data.clientTime ?? Date.now(),
+          });
+          resolve({ ok: true, message: '已拉取并合并' });
+          return;
         }
-        if (data.transactions && Array.isArray(data.transactions)) {
-          saveTransactions(data.transactions);
+        if (data.categories && Array.isArray(data.categories) && data.transactions && Array.isArray(data.transactions)) {
+          const bid = getCurrentBookId();
+          const ledgers = loadLedgers();
+          const target = ledgers.some((l) => l.id === bid) ? bid : ledgers[0]?.id;
+          if (target) {
+            saveCategoriesForBook(target, data.categories);
+            saveTransactionsForBook(target, data.transactions);
+          }
+          resolve({ ok: true, message: '已拉取并合并（旧版格式，仅当前账本）' });
+          return;
         }
-        resolve({ ok: true, message: '已拉取并合并' });
+        resolve({ ok: false, message: '数据格式无效' });
       },
       fail: (err) => {
         resolve({ ok: false, message: err.errMsg || '网络错误' });
