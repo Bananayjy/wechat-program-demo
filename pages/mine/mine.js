@@ -6,13 +6,27 @@ const sync_1 = require("../../utils/sync");
 Page({
     data: {
         apiBase: '',
+        catalogueCode: '',
+        cloudEnvId: '',
         syncEnabled: false,
     },
-    onShow() {
+    async onShow() {
         const c = (0, storage_1.loadSyncConfig)();
         this.setData({
             apiBase: c.apiBase,
+            catalogueCode: c.catalogueCode,
+            cloudEnvId: c.cloudEnvId,
             syncEnabled: c.enabled,
+        });
+        const cloudCfg = await (0, sync_1.pullSyncConfigRemote)(c);
+        if (!cloudCfg.ok || !cloudCfg.config)
+            return;
+        (0, storage_1.saveSyncConfig)(cloudCfg.config);
+        this.setData({
+            apiBase: cloudCfg.config.apiBase,
+            catalogueCode: cloudCfg.config.catalogueCode,
+            cloudEnvId: cloudCfg.config.cloudEnvId,
+            syncEnabled: cloudCfg.config.enabled,
         });
     },
     goLedgerManage() {
@@ -73,12 +87,20 @@ Page({
     onApiBaseInput(e) {
         this.setData({ apiBase: e.detail.value });
     },
+    onCatalogueCodeInput(e) {
+        this.setData({ catalogueCode: e.detail.value });
+    },
+    onCloudEnvInput(e) {
+        this.setData({ cloudEnvId: e.detail.value });
+    },
     onSyncSwitch(e) {
         this.setData({ syncEnabled: e.detail.value });
     },
-    onSaveSync() {
+    async onSaveSync() {
         const c = {
             apiBase: this.data.apiBase.trim(),
+            catalogueCode: this.data.catalogueCode.trim(),
+            cloudEnvId: this.data.cloudEnvId.trim(),
             enabled: this.data.syncEnabled,
         };
         const err = (0, sync_1.validateSyncConfig)(c);
@@ -87,7 +109,11 @@ Page({
             return;
         }
         (0, storage_1.saveSyncConfig)(c);
-        wx.showToast({ title: '已保存', icon: 'success' });
+        const remote = await (0, sync_1.saveSyncConfigRemote)(c);
+        wx.showToast({
+            title: remote.ok ? '本地和云端已保存' : `本地已保存，云端失败：${remote.message}`,
+            icon: remote.ok ? 'success' : 'none',
+        });
     },
     async onPush() {
         wx.showLoading({ title: '上传中' });

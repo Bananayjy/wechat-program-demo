@@ -16,7 +16,7 @@
     "typescript": true,
     "compileWorklet": false,
     "uglifyFileName": false,
-    "uploadWithSourceMap": true,
+    "uploadWithSourceMap": false,
     "minifyWXSS": true,
     "minifyWXML": true,
     "localPlugins": false,
@@ -25,14 +25,58 @@
     "swc": false,
     "disableSWC": true,
     "packNpmManually": false,
+    "ignoreUploadUnusedFiles": true,
     "useCompilerPlugins": false
   },
   "simulatorPluginLibVersion": {},
   "packOptions": {
-    "ignore": [],
+    "ignore": [
+      {
+        "type": "folder",
+        "value": "node_modules"
+      },
+      {
+        "type": "folder",
+        "value": "cloudfunctions"
+      },
+      {
+        "type": "folder",
+        "value": ".git"
+      },
+      {
+        "type": "suffix",
+        "value": ".ts"
+      },
+      {
+        "type": "file",
+        "value": "package-lock.json"
+      },
+      {
+        "type": "file",
+        "value": "package.json"
+      },
+      {
+        "type": "file",
+        "value": "README.md"
+      },
+      {
+        "type": "file",
+        "value": "tsconfig.json"
+      },
+      {
+        "type": "suffix",
+        "value": ".map"
+      },
+      {
+        "type": "file",
+        "value": ".DS_Store"
+      }
+    ],
     "include": []
   },
+  "cloudfunctionRoot": "cloudfunctions/",
   "appid": "wx0d7329ca9e49af00",
   "editorSetting": {},
-  "libVersion": "3.15.1"
+  "libVersion": "3.15.1",
+  "cloudfunctionTemplateRoot": "cloudfunctionTemplate/"
 }

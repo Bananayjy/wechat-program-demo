@@ -1,14 +1,42 @@
 {
   "pages": [
     "pages/index/index",
-    "pages/add/add",
     "pages/list/list",
     "pages/stats/stats",
-    "pages/mine/mine",
-    "pages/ledger-manage/ledger-manage",
-    "pages/category-edit/category-edit",
-    "pages/transaction-edit/transaction-edit"
+    "pages/mine/mine"
   ],
+  "subpackages": [
+    {
+      "root": "pages/add",
+      "pages": ["add"]
+    },
+    {
+      "root": "pages/ledger-manage",
+      "pages": ["ledger-manage"]
+    },
+    {
+      "root": "pages/category-edit",
+      "pages": ["category-edit"]
+    },
+    {
+      "root": "pages/transaction-edit",
+      "pages": ["transaction-edit"]
+    }
+  ],
+  "preloadRule": {
+    "pages/index/index": {
+      "network": "all",
+      "packages": ["pages/add"]
+    },
+    "pages/mine/mine": {
+      "network": "all",
+      "packages": ["pages/ledger-manage", "pages/category-edit"]
+    },
+    "pages/list/list": {
+      "network": "all",
+      "packages": ["pages/transaction-edit"]
+    }
+  },
   "window": {
     "navigationBarTitleText": "日常记账",
     "navigationBarBackgroundColor": "#E8A010",
@@ -48,5 +76,6 @@
     ]
   },
   "style": "v2",
+  "lazyCodeLoading": "requiredComponents",
   "sitemapLocation": "sitemap.json"
 }

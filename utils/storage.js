@@ -335,28 +335,39 @@ function removeTransaction(id) {
     saveTransactionsForBook(bookId, list);
     return true;
 }
-function loadSyncConfig() {
+function normalizeSyncConfig(raw) {
     var _a;
+    const parsed = (raw || {});
+    const apiBaseRaw = (_a = parsed.apiBase) !== null && _a !== void 0 ? _a : parsed.baseUrl;
+    const cloudEnvIdRaw = parsed.cloudEnvId;
+    const catalogueCodeRaw = parsed.catalogueCode;
+    const apiBase = typeof apiBaseRaw === 'string' && apiBaseRaw.startsWith('http')
+        ? apiBaseRaw.trim()
+        : '';
+    const cloudEnvId = typeof cloudEnvIdRaw === 'string' ? cloudEnvIdRaw.trim() : '';
+    const catalogueCode = typeof catalogueCodeRaw === 'string' ? catalogueCodeRaw.trim() : '';
+    return {
+        apiBase,
+        enabled: !!parsed.enabled,
+        catalogueCode,
+        cloudEnvId,
+    };
+}
+function loadSyncConfig() {
     try {
         const raw = wx.getStorageSync(KEY_SYNC_CONFIG);
-        if (!raw)
-            return { apiBase: '', enabled: false };
-        const parsed = (typeof raw === 'string' ? JSON.parse(raw) : raw);
-        const apiBaseRaw = (_a = parsed.apiBase) !== null && _a !== void 0 ? _a : parsed.baseUrl;
-        const apiBase = typeof apiBaseRaw === 'string' && apiBaseRaw.startsWith('http')
-            ? apiBaseRaw
-            : '';
-        return {
-            apiBase,
-            enabled: !!parsed.enabled,
-        };
+        if (!raw) {
+            return { apiBase: '', enabled: false, catalogueCode: '', cloudEnvId: '' };
+        }
+        const parsed = typeof raw === 'string' ? JSON.parse(raw) : raw;
+        return normalizeSyncConfig(parsed);
     }
-    catch (_b) {
-        return { apiBase: '', enabled: false };
+    catch (_a) {
+        return { apiBase: '', enabled: false, catalogueCode: '', cloudEnvId: '' };
     }
 }
 function saveSyncConfig(c) {
-    wx.setStorageSync(KEY_SYNC_CONFIG, c);
+    wx.setStorageSync(KEY_SYNC_CONFIG, normalizeSyncConfig(c));
 }
 function buildFullSyncPayload() {
     ensureStorageReady();

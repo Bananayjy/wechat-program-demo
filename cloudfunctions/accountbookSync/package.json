@@ -1,0 +1,9 @@
+{
+  "name": "accountbook-sync",
+  "version": "1.0.0",
+  "description": "小账本同步云函数",
+  "main": "index.js",
+  "dependencies": {
+    "wx-server-sdk": "latest"
+  }
+}

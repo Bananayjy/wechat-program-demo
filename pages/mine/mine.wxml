@@ -22,9 +22,27 @@
 
   <view class="card">
     <text class="block-title">数据同步（可选）</text>
-    <text class="text-muted sub">需服务端提供接口；请求路径以 / 开头，不含 /kapi</text>
+    <text class="text-muted sub">使用云开发云函数；业务路径以 / 开头，不含 /kapi</text>
     <view class="field">
-      <text class="label">https 站点根地址</text>
+      <text class="label">catalogueCode 页面分类编码</text>
+      <input
+        class="input"
+        placeholder="请输入页面分类编码"
+        value="{{catalogueCode}}"
+        bindinput="onCatalogueCodeInput"
+      />
+    </view>
+    <view class="field">
+      <text class="label">云环境 ID（可选）</text>
+      <input
+        class="input"
+        placeholder="留空则使用当前云环境"
+        value="{{cloudEnvId}}"
+        bindinput="onCloudEnvInput"
+      />
+    </view>
+    <view class="field">
+      <text class="label">备用 https 站点根地址（可选）</text>
       <input
         class="input"
         placeholder="https://api.example.com"

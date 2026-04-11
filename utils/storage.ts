@@ -329,31 +329,47 @@ export interface SyncConfig {
   /** 自建同步站点根地址，需 https 完整域名，如 https://api.example.com */
   apiBase: string;
   enabled: boolean;
+  /** 页面分类编码，通过分类查询页面列表 */
+  catalogueCode: string;
+  /** 云开发环境 ID；为空时使用当前动态环境 */
+  cloudEnvId: string;
+}
+
+function normalizeSyncConfig(raw: unknown): SyncConfig {
+  const parsed = (raw || {}) as Record<string, unknown>;
+  const apiBaseRaw = parsed.apiBase ?? parsed.baseUrl;
+  const cloudEnvIdRaw = parsed.cloudEnvId;
+  const catalogueCodeRaw = parsed.catalogueCode;
+  const apiBase =
+    typeof apiBaseRaw === 'string' && apiBaseRaw.startsWith('http')
+      ? apiBaseRaw.trim()
+      : '';
+  const cloudEnvId = typeof cloudEnvIdRaw === 'string' ? cloudEnvIdRaw.trim() : '';
+  const catalogueCode =
+    typeof catalogueCodeRaw === 'string' ? catalogueCodeRaw.trim() : '';
+  return {
+    apiBase,
+    enabled: !!parsed.enabled,
+    catalogueCode,
+    cloudEnvId,
+  };
 }
 
 export function loadSyncConfig(): SyncConfig {
   try {
     const raw = wx.getStorageSync(KEY_SYNC_CONFIG) as SyncConfig | string | undefined;
-    if (!raw) return { apiBase: '', enabled: false };
-    const parsed = (
-      typeof raw === 'string' ? JSON.parse(raw) : raw
-    ) as unknown as Record<string, unknown>;
-    const apiBaseRaw = parsed.apiBase ?? parsed.baseUrl;
-    const apiBase =
-      typeof apiBaseRaw === 'string' && apiBaseRaw.startsWith('http')
-        ? apiBaseRaw
-        : '';
-    return {
-      apiBase,
-      enabled: !!parsed.enabled,
-    };
+    if (!raw) {
+      return { apiBase: '', enabled: false, catalogueCode: '', cloudEnvId: '' };
+    }
+    const parsed = typeof raw === 'string' ? JSON.parse(raw) : raw;
+    return normalizeSyncConfig(parsed);
   } catch {
-    return { apiBase: '', enabled: false };
+    return { apiBase: '', enabled: false, catalogueCode: '', cloudEnvId: '' };
   }
 }
 
 export function saveSyncConfig(c: SyncConfig): void {
-  wx.setStorageSync(KEY_SYNC_CONFIG, c);
+  wx.setStorageSync(KEY_SYNC_CONFIG, normalizeSyncConfig(c));
 }
 
 /** 多账本同步载荷：账本列表 + 各账本分类与流水 */

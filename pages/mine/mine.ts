@@ -6,19 +6,38 @@ import {
   loadTransactions,
   saveSyncConfig,
 } from '../../utils/storage';
-import { pullFromRemote, pushToRemote, validateSyncConfig } from '../../utils/sync';
+import {
+  pullFromRemote,
+  pullSyncConfigRemote,
+  pushToRemote,
+  saveSyncConfigRemote,
+  validateSyncConfig,
+} from '../../utils/sync';
 
 Page({
   data: {
     apiBase: '',
+    catalogueCode: '',
+    cloudEnvId: '',
     syncEnabled: false,
   },
 
-  onShow() {
+  async onShow() {
     const c = loadSyncConfig();
     this.setData({
       apiBase: c.apiBase,
+      catalogueCode: c.catalogueCode,
+      cloudEnvId: c.cloudEnvId,
       syncEnabled: c.enabled,
+    });
+    const cloudCfg = await pullSyncConfigRemote(c);
+    if (!cloudCfg.ok || !cloudCfg.config) return;
+    saveSyncConfig(cloudCfg.config);
+    this.setData({
+      apiBase: cloudCfg.config.apiBase,
+      catalogueCode: cloudCfg.config.catalogueCode,
+      cloudEnvId: cloudCfg.config.cloudEnvId,
+      syncEnabled: cloudCfg.config.enabled,
     });
   },
 
@@ -84,13 +103,23 @@ Page({
     this.setData({ apiBase: e.detail.value });
   },
 
+  onCatalogueCodeInput(e: WechatMiniprogram.Input) {
+    this.setData({ catalogueCode: e.detail.value });
+  },
+
+  onCloudEnvInput(e: WechatMiniprogram.Input) {
+    this.setData({ cloudEnvId: e.detail.value });
+  },
+
   onSyncSwitch(e: WechatMiniprogram.SwitchChange) {
     this.setData({ syncEnabled: e.detail.value });
   },
 
-  onSaveSync() {
+  async onSaveSync() {
     const c = {
       apiBase: this.data.apiBase.trim(),
+      catalogueCode: this.data.catalogueCode.trim(),
+      cloudEnvId: this.data.cloudEnvId.trim(),
       enabled: this.data.syncEnabled,
     };
     const err = validateSyncConfig(c);
@@ -99,7 +128,11 @@ Page({
       return;
     }
     saveSyncConfig(c);
-    wx.showToast({ title: '已保存', icon: 'success' });
+    const remote = await saveSyncConfigRemote(c);
+    wx.showToast({
+      title: remote.ok ? '本地和云端已保存' : `本地已保存，云端失败：${remote.message}`,
+      icon: remote.ok ? 'success' : 'none',
+    });
   },
 
   async onPush() {
