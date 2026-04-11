@@ -11,11 +11,13 @@
   flex: 1;
   background: #fff;
   color: #e87868;
-  border: 2rpx solid rgba(232, 120, 104, 0.45);
-  border-radius: 999rpx;
+  border: 3rpx solid rgba(196, 92, 80, 0.55);
+  border-radius: 0;
   font-size: 30rpx;
-  font-weight: 600;
+  font-weight: 700;
+  letter-spacing: 1rpx;
   padding: 22rpx 32rpx;
+  box-shadow: 4rpx 0 0 rgba(196, 92, 80, 0.2), 0 4rpx 0 rgba(196, 92, 80, 0.2);
 }
 
 .btn-del::after {

@@ -36,7 +36,7 @@
   margin-top: 28rpx;
   margin-bottom: 8rpx;
   padding-top: 24rpx;
-  border-top: 2rpx solid rgba(255, 193, 7, 0.22);
+  border-top: 4rpx dashed rgba(143, 118, 57, 0.5);
 }
 
 .book-chip {
@@ -47,14 +47,15 @@
   color: #6b5a42;
   font-weight: 800;
   margin-bottom: 16rpx;
-  letter-spacing: 1rpx;
+  letter-spacing: 2rpx;
   line-height: 1.25;
   text-align: center;
+  text-shadow: 2rpx 0 0 #f4d47a, 0 2rpx 0 #f4d47a;
 }
 
 /* 轮播单卡尽量占满横向可视区（长度加宽） */
 .card.summary-slide {
-  margin: 0 4rpx;
+  margin: 0 6rpx;
 }
 
 .summary-slide {
@@ -73,10 +74,15 @@
 .hero-title {
   font-size: 32rpx;
   font-weight: 700;
-  letter-spacing: 1rpx;
+  letter-spacing: 2rpx;
   margin-bottom: 24rpx;
   display: block;
   color: #8b7a58;
+  background: #fff4cf;
+  border: 3rpx solid #9a7a34;
+  border-radius: 0;
+  padding: 8rpx 12rpx;
+  box-shadow: 4rpx 0 0 #d0ae5c, 0 4rpx 0 #d0ae5c;
 }
 
 .hero-emoji {
@@ -90,23 +96,33 @@
   margin-bottom: 20rpx;
 }
 
+.hero-row > view {
+  flex: 1;
+  border: 3rpx solid #9a7a34;
+  background: #fffaf0;
+  padding: 12rpx 12rpx 14rpx;
+  box-sizing: border-box;
+  box-shadow: 4rpx 0 0 #d0ae5c, 0 4rpx 0 #d0ae5c;
+}
+
 .hero-amount {
   font-size: 42rpx;
   font-weight: 700;
   margin-top: 10rpx;
-  letter-spacing: 0.5rpx;
+  letter-spacing: 1.5rpx;
+  line-height: 1.15;
 }
 
 .hero-row + .rank-section {
   margin-top: 0;
   padding-top: 16rpx;
-  border-top: 1rpx solid rgba(255, 193, 7, 0.18);
+  border-top: 3rpx solid rgba(154, 122, 52, 0.3);
 }
 
 .rank-section + .rank-section {
   margin-top: 8rpx;
   padding-top: 16rpx;
-  border-top: 1rpx solid rgba(255, 193, 7, 0.18);
+  border-top: 3rpx solid rgba(154, 122, 52, 0.3);
 }
 
 .rank-title {
@@ -115,15 +131,18 @@
   font-weight: 700;
   color: #a89878;
   margin-bottom: 12rpx;
-  letter-spacing: 0.5rpx;
+  letter-spacing: 1rpx;
 }
 
 .rank-row {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  padding: 10rpx 0;
+  padding: 10rpx 8rpx;
   gap: 16rpx;
+  border: 2rpx solid rgba(154, 122, 52, 0.35);
+  margin-bottom: 8rpx;
+  background: rgba(255, 250, 240, 0.5);
 }
 
 .rank-name {
@@ -131,7 +150,7 @@
   min-width: 0;
   font-size: 26rpx;
   color: #5c4a42;
-  font-weight: 500;
+  font-weight: 600;
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
@@ -148,6 +167,7 @@
   font-size: 24rpx;
   color: #a89878;
   padding: 8rpx 0 4rpx;
+  letter-spacing: 1rpx;
 }
 
 /* 抬高以避免与 TabBar 重叠 */

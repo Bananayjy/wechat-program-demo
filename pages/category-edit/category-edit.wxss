@@ -22,21 +22,23 @@
 .add-row .input {
   flex: 1;
   background: rgba(255, 224, 130, 0.2);
-  border-radius: 20rpx;
+  border-radius: 0;
   padding: 20rpx 24rpx;
   font-size: 28rpx;
-  border: 2rpx solid rgba(255, 193, 7, 0.18);
+  border: 3rpx solid rgba(138, 102, 34, 0.35);
+  box-shadow: inset 0 0 0 2rpx rgba(255, 255, 255, 0.45);
 }
 
 .btn-mini {
   font-size: 26rpx;
   padding: 18rpx 32rpx;
   background: linear-gradient(135deg, #ffe082 0%, #ffca28 100%);
-  color: #fff;
-  border-radius: 999rpx;
+  color: #5b4215;
+  border-radius: 0;
   line-height: 1.4;
-  font-weight: 600;
-  box-shadow: 0 6rpx 18rpx rgba(255, 179, 0, 0.28);
+  font-weight: 700;
+  border: 3rpx solid #5b4215;
+  box-shadow: 4rpx 0 0 rgba(138, 102, 34, 0.35), 0 4rpx 0 rgba(138, 102, 34, 0.35);
 }
 
 .btn-mini::after {
@@ -49,13 +51,14 @@
   display: block;
   font-size: 28rpx;
   color: #8b7a58;
+  letter-spacing: 1rpx;
 }
 
 .cat-row {
   display: flex;
   align-items: center;
   padding: 24rpx 0;
-  border-bottom: 2rpx dashed rgba(255, 193, 7, 0.2);
+  border-bottom: 3rpx dashed rgba(154, 122, 52, 0.3);
   font-size: 28rpx;
   color: #5c4a42;
 }
@@ -73,7 +76,8 @@
   color: #d48c00;
   margin-left: 24rpx;
   font-size: 26rpx;
-  font-weight: 600;
+  font-weight: 700;
+  letter-spacing: 1rpx;
 }
 
 .link.danger {

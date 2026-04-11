@@ -1,9 +1,22 @@
+@font-face {
+  font-family: 'PixelFont';
+  src:
+    local('Press Start 2P'),
+    local('Fusion Pixel 12px Proportional CN'),
+    url('https://cdn.jsdelivr.net/gh/google/fonts/ofl/pressstart2p/PressStart2P-Regular.ttf')
+      format('truetype');
+  font-weight: normal;
+  font-style: normal;
+}
+
 page {
   background-color: #fffbeb;
   background-image: linear-gradient(180deg, #fffef8 0%, #fff8e1 45%, #fff3d0 100%);
   color: #5c4a42;
   font-size: 28rpx;
-  line-height: 1.55;
+  line-height: 1.5;
+  font-family: 'PixelFont', 'PingFang SC', 'Microsoft YaHei', monospace;
+  letter-spacing: 0.5rpx;
   box-sizing: border-box;
 }
 
@@ -14,22 +27,23 @@ page {
 
 .card {
   background: linear-gradient(145deg, #ffffff 0%, #fffef8 100%);
-  border-radius: 28rpx;
+  border-radius: 0;
   padding: 28rpx 32rpx;
   margin: 0 24rpx 24rpx;
-  box-shadow: 0 8rpx 28rpx rgba(255, 193, 7, 0.12), 0 2rpx 8rpx rgba(200, 170, 100, 0.08);
-  border: 2rpx solid rgba(255, 255, 255, 0.95);
+  border: 4rpx solid #4c3f2c;
+  box-shadow: 8rpx 0 0 #6e5a34, 0 8rpx 0 #6e5a34, 0 0 0 4rpx #fff6d9 inset;
 }
 
 .btn-primary {
   background: linear-gradient(135deg, #ffe082 0%, #ffca28 50%, #ffb300 100%);
-  color: #fff;
-  border-radius: 999rpx;
+  color: #5b4215;
+  border-radius: 0;
   font-size: 30rpx;
-  font-weight: 600;
+  font-weight: 700;
+  letter-spacing: 1rpx;
   padding: 24rpx 36rpx;
-  border: none;
-  box-shadow: 0 8rpx 24rpx rgba(255, 179, 0, 0.32);
+  border: 4rpx solid #5b4215;
+  box-shadow: 8rpx 0 0 #8a6622, 0 8rpx 0 #8a6622;
 }
 
 .btn-primary::after {
@@ -39,12 +53,22 @@ page {
 .text-muted {
   color: #a89878;
   font-size: 24rpx;
+  letter-spacing: 0.5rpx;
 }
 
 .amount-income {
   color: #5aab7a;
+  font-weight: 700;
+  letter-spacing: 1rpx;
 }
 
 .amount-expense {
   color: #e87868;
+  font-weight: 700;
+  letter-spacing: 1rpx;
+}
+
+.btn-primary:active {
+  transform: translate(4rpx, 4rpx);
+  box-shadow: 4rpx 0 0 #8a6622, 0 4rpx 0 #8a6622;
 }

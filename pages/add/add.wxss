@@ -5,9 +5,11 @@
 
 .seg {
   display: flex;
-  background: rgba(255, 193, 7, 0.14);
-  border-radius: 999rpx;
-  padding: 8rpx;
+  background: rgba(255, 193, 7, 0.12);
+  border-radius: 0;
+  padding: 6rpx;
+  border: 3rpx solid rgba(91, 66, 21, 0.45);
+  box-shadow: 4rpx 0 0 rgba(138, 102, 34, 0.35), 0 4rpx 0 rgba(138, 102, 34, 0.35);
   margin-bottom: 36rpx;
 }
 
@@ -15,17 +17,19 @@
   flex: 1;
   text-align: center;
   padding: 18rpx 16rpx;
-  border-radius: 999rpx;
+  border-radius: 0;
   font-size: 28rpx;
   color: #9a8a78;
-  font-weight: 500;
+  font-weight: 700;
+  letter-spacing: 1rpx;
 }
 
 .seg-item.on {
   background: linear-gradient(135deg, #fff 0%, #fffbeb 100%);
-  color: #d48c00;
+  color: #5b4215;
   font-weight: 700;
-  box-shadow: 0 4rpx 16rpx rgba(255, 193, 7, 0.22);
+  border: 2rpx solid rgba(138, 102, 34, 0.5);
+  box-shadow: 3rpx 0 0 rgba(138, 102, 34, 0.35), 0 3rpx 0 rgba(138, 102, 34, 0.35);
 }
 
 .field {
@@ -37,21 +41,24 @@
   color: #a89878;
   font-size: 24rpx;
   margin-bottom: 14rpx;
-  font-weight: 600;
+  font-weight: 700;
+  letter-spacing: 1rpx;
 }
 
 .input {
   background: rgba(255, 224, 130, 0.2);
-  border-radius: 20rpx;
+  border-radius: 0;
   padding: 22rpx 26rpx;
   font-size: 30rpx;
-  border: 2rpx solid rgba(255, 193, 7, 0.18);
+  border: 3rpx solid rgba(138, 102, 34, 0.35);
+  box-shadow: inset 0 0 0 2rpx rgba(255, 255, 255, 0.45);
 }
 
 .input.amount {
   font-size: 46rpx;
   font-weight: 700;
   color: #5c4a42;
+  letter-spacing: 1rpx;
 }
 
 .amount-row {
@@ -68,7 +75,7 @@
   font-size: 46rpx;
   font-weight: 700;
   color: #5c4a42;
-  letter-spacing: 1rpx;
+  letter-spacing: 1.4rpx;
 }
 
 .amount-placeholder {
@@ -84,10 +91,10 @@
 
 .calc {
   background: linear-gradient(180deg, rgba(255, 248, 225, 0.95) 0%, rgba(255, 236, 179, 0.55) 100%);
-  border-radius: 28rpx;
+  border-radius: 0;
   padding: 20rpx 16rpx 22rpx;
-  border: 2rpx solid rgba(255, 193, 7, 0.22);
-  box-shadow: 0 8rpx 24rpx rgba(255, 180, 50, 0.12);
+  border: 3rpx solid rgba(138, 102, 34, 0.35);
+  box-shadow: 6rpx 0 0 rgba(138, 102, 34, 0.25), 0 6rpx 0 rgba(138, 102, 34, 0.25);
 }
 
 .calc-row {
@@ -108,14 +115,14 @@
   font-weight: 700;
   color: #6b5a48;
   background: linear-gradient(180deg, #fffef9 0%, #fff8e1 100%);
-  border-radius: 20rpx;
-  border: 2rpx solid rgba(255, 193, 7, 0.28);
-  box-shadow: 0 4rpx 0 rgba(255, 193, 7, 0.18);
+  border-radius: 0;
+  border: 3rpx solid rgba(138, 102, 34, 0.35);
+  box-shadow: 3rpx 0 0 rgba(138, 102, 34, 0.22), 0 3rpx 0 rgba(138, 102, 34, 0.22);
 }
 
 .calc-key:active {
-  transform: translateY(2rpx);
-  box-shadow: 0 2rpx 0 rgba(255, 193, 7, 0.15);
+  transform: translate(2rpx, 2rpx);
+  box-shadow: 1rpx 0 0 rgba(138, 102, 34, 0.18), 0 1rpx 0 rgba(138, 102, 34, 0.18);
 }
 
 .calc-key-soft {
@@ -146,25 +153,28 @@
   padding: 16rpx 32rpx;
   margin-right: 16rpx;
   background: rgba(255, 224, 130, 0.22);
-  border-radius: 999rpx;
+  border-radius: 0;
   font-size: 26rpx;
   color: #7a6a58;
-  border: 2rpx solid transparent;
+  border: 3rpx solid rgba(138, 102, 34, 0.18);
+  letter-spacing: 1rpx;
 }
 
 .chip.on {
   background: linear-gradient(135deg, #fff8e1 0%, #ffecb3 100%);
-  color: #c77800;
+  color: #5b4215;
   font-weight: 700;
-  border-color: rgba(255, 160, 0, 0.38);
+  border-color: rgba(138, 102, 34, 0.45);
+  box-shadow: 3rpx 0 0 rgba(138, 102, 34, 0.18), 0 3rpx 0 rgba(138, 102, 34, 0.18);
 }
 
 .picker-val {
   padding: 22rpx 26rpx;
   background: rgba(255, 224, 130, 0.2);
-  border-radius: 20rpx;
+  border-radius: 0;
   font-size: 30rpx;
-  border: 2rpx solid rgba(255, 193, 7, 0.18);
+  border: 3rpx solid rgba(138, 102, 34, 0.35);
+  box-shadow: inset 0 0 0 2rpx rgba(255, 255, 255, 0.45);
 }
 
 .save {

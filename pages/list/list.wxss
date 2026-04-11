@@ -19,6 +19,7 @@
   padding: 22rpx 28rpx;
   font-size: 28rpx;
   color: #6b5a4a;
+  letter-spacing: 0.6rpx;
 }
 
 .ledger-label {
@@ -54,25 +55,28 @@
 .filter-seg {
   display: flex;
   background: rgba(255, 193, 7, 0.14);
-  border-radius: 999rpx;
-  padding: 8rpx;
+  border-radius: 0;
+  padding: 6rpx;
+  border: 3rpx solid rgba(91, 66, 21, 0.4);
 }
 
 .filter-seg-item {
   flex: 1;
   text-align: center;
   padding: 18rpx 12rpx;
-  border-radius: 999rpx;
+  border-radius: 0;
   font-size: 28rpx;
   color: #9a8a78;
-  font-weight: 500;
+  font-weight: 700;
+  letter-spacing: 1rpx;
 }
 
 .filter-seg-item.on {
   background: linear-gradient(135deg, #fff 0%, #fffbeb 100%);
-  color: #d48c00;
+  color: #5b4215;
   font-weight: 700;
-  box-shadow: 0 4rpx 16rpx rgba(255, 193, 7, 0.22);
+  border: 2rpx solid rgba(138, 102, 34, 0.45);
+  box-shadow: 3rpx 0 0 rgba(138, 102, 34, 0.22), 0 3rpx 0 rgba(138, 102, 34, 0.22);
 }
 
 .filter-line {
@@ -93,7 +97,9 @@
   padding: 20rpx 28rpx 16rpx;
   margin-top: 8rpx;
   background: rgba(255, 224, 130, 0.18);
-  border-radius: 16rpx;
+  border-radius: 0;
+  border: 3rpx solid rgba(154, 122, 52, 0.35);
+  box-shadow: 4rpx 0 0 rgba(154, 122, 52, 0.2), 0 4rpx 0 rgba(154, 122, 52, 0.2);
   margin-left: 24rpx;
   margin-right: 24rpx;
 }
@@ -109,6 +115,7 @@
   font-size: 30rpx;
   font-weight: 700;
   color: #8b7a58;
+  letter-spacing: 1rpx;
 }
 
 .month-chev {
@@ -187,7 +194,7 @@
   justify-content: space-between;
   align-items: center;
   padding: 30rpx 28rpx;
-  border-bottom: 2rpx dashed rgba(255, 193, 7, 0.2);
+  border-bottom: 3rpx dashed rgba(154, 122, 52, 0.28);
 }
 
 .row:last-child {
@@ -201,9 +208,10 @@
 
 .cat-name {
   font-size: 30rpx;
-  font-weight: 600;
+  font-weight: 700;
   color: #5c4a42;
   display: block;
+  letter-spacing: 1rpx;
 }
 
 .note {
