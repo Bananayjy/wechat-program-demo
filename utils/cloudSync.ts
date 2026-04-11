@@ -1,3 +1,4 @@
+import { getAuthToken } from './session';
 import type { SyncConfig } from './storage';
 
 const SYNC_FUNCTION_NAME = 'accountbookSync';
@@ -39,18 +40,16 @@ export async function callCloudPath<T>(
       data: {
         path,
         payload,
-        catalogueCode: cfg.catalogueCode || '',
         clientTs: Date.now(),
+        authToken: getAuthToken(),
       },
     };
     if (cloudEnv) {
       args.config = { env: cloudEnv };
     }
-    console.log("before save");
     const res = (await callFunctionWithFallback(args, !!cloudEnv)) as {
       result?: RawCloudResponse<T>;
     };
-    console.log("res::" + JSON.stringify(res));
     const raw = (res.result || {}) as RawCloudResponse<T>;
     const hasResultPayload = raw && Object.keys(raw).length > 0;
     const normalizedMessage =
@@ -102,4 +101,17 @@ async function callFunctionWithFallback(
     delete retryArgs.config;
     return await wx.cloud.callFunction(retryArgs as never);
   }
+}
+
+/** 未登录也可调用的云路径（如 /auth/login），仅需云环境 ID */
+export async function callCloudPublicPath<T>(
+  path: string,
+  payload: Record<string, unknown>,
+  cloudEnvId = ''
+): Promise<CloudResult<T>> {
+  return callCloudPath<T>(path, payload, {
+    apiBase: '',
+    enabled: false,
+    cloudEnvId: cloudEnvId.trim(),
+  });
 }

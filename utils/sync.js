@@ -1,5 +1,8 @@
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
+exports.fetchProfileRemote = fetchProfileRemote;
+exports.updateProfileRemote = updateProfileRemote;
+exports.bindWechatRemote = bindWechatRemote;
 exports.pushToRemote = pushToRemote;
 exports.pullFromRemote = pullFromRemote;
 exports.saveSyncConfigRemote = saveSyncConfigRemote;
@@ -7,6 +10,20 @@ exports.pullSyncConfigRemote = pullSyncConfigRemote;
 exports.validateSyncConfig = validateSyncConfig;
 const storage_1 = require("./storage");
 const cloudSync_1 = require("./cloudSync");
+async function fetchProfileRemote(cfg) {
+    const res = await (0, cloudSync_1.callCloudPath)('/user/profile/get', {}, cfg);
+    if (!res.ok || !res.data)
+        return { ok: false, message: res.message };
+    return { ok: true, message: res.message, profile: res.data };
+}
+async function updateProfileRemote(cfg, patch) {
+    const res = await (0, cloudSync_1.callCloudPath)('/user/profile/update', patch, cfg);
+    return { ok: res.ok, message: res.message };
+}
+async function bindWechatRemote(cfg) {
+    const res = await (0, cloudSync_1.callCloudPath)('/wechat/bind', {}, cfg);
+    return { ok: res.ok, message: res.message };
+}
 /** 云开发同步入口：业务路径统一以 / 开头，不含 /kapi。 */
 const UPLOAD_TX_CHUNK_SIZE = 120;
 const PULL_TX_CHUNK_SIZE = 120;
@@ -53,36 +70,14 @@ async function pushToRemote() {
     return { ok: true, message: `已上传 ${bookIds.length} 个账本，${txCount} 条流水` };
 }
 async function pullFromRemote() {
-    var _a, _b;
+    var _a;
     const cfg = (0, storage_1.loadSyncConfig)();
     if (!cfg.enabled) {
         return { ok: false, message: '未启用同步' };
     }
-    if (!cfg.catalogueCode || !cfg.catalogueCode.trim()) {
-        return { ok: false, message: '未配置 catalogueCode，无法拉取' };
-    }
     const metaRes = await (0, cloudSync_1.callCloudPath)('/accountbook/pull/meta', {}, cfg);
-    if (!metaRes.ok) {
-        // 兼容旧版云函数：旧协议只支持 /accountbook/pull 全量返回
-        if (isPathNotSupported(metaRes.message, metaRes.statusCode)) {
-            const legacyRes = await (0, cloudSync_1.callCloudPath)('/accountbook/pull', {}, cfg);
-            if (!legacyRes.ok || !legacyRes.data) {
-                return { ok: false, message: `拉取失败：${legacyRes.message}` };
-            }
-            const legacy = legacyRes.data;
-            if (!Array.isArray(legacy.ledgers) || !Array.isArray(legacy.books)) {
-                return { ok: false, message: '旧版拉取返回格式无效' };
-            }
-            (0, storage_1.applyFullSyncPayload)({
-                ledgers: legacy.ledgers,
-                books: legacy.books,
-                clientTime: (_a = legacy.clientTime) !== null && _a !== void 0 ? _a : Date.now(),
-            });
-            const txCount = legacy.books.reduce((sum, b) => sum + (Array.isArray(b.transactions) ? b.transactions.length : 0), 0);
-            return { ok: true, message: `已拉取 ${legacy.books.length} 个账本，${txCount} 条流水` };
-        }
-        return { ok: false, message: `拉取失败：${metaRes.message}` };
-    }
+    if (!metaRes.ok)
+        return { ok: false, message: metaRes.message };
     const meta = metaRes.data;
     if (!meta || !Array.isArray(meta.ledgers) || !Array.isArray(meta.bookIds)) {
         return { ok: false, message: '拉取元数据失败' };
@@ -125,13 +120,12 @@ async function pullFromRemote() {
     (0, storage_1.applyFullSyncPayload)({
         ledgers: meta.ledgers,
         books,
-        clientTime: (_b = meta.clientTime) !== null && _b !== void 0 ? _b : Date.now(),
+        clientTime: (_a = meta.clientTime) !== null && _a !== void 0 ? _a : Date.now(),
     });
     return { ok: true, message: `已拉取 ${books.length} 个账本，${txCount} 条流水` };
 }
 function saveSyncConfigRemote(config) {
     return (0, cloudSync_1.callCloudPath)('/accountbook/config/save', config, config).then((res) => {
-      console.log("invoke /accountbook/config/save:" + JSON.stringify(res));
         if (!res.ok)
             return { ok: false, message: res.message };
         return { ok: true, message: '配置已保存到云端' };
@@ -157,18 +151,10 @@ function splitChunks(list, chunkSize) {
     }
     return out;
 }
-function isPathNotSupported(message, statusCode) {
-    if (statusCode === 404)
-        return true;
-    return /未支持的路径|path/i.test(message || '');
-}
 /** 业务路径需以 / 开头；站点根需为 https 完整地址 */
 function validateSyncConfig(c) {
     if (!c.enabled)
         return null;
-    if (!c.catalogueCode || !c.catalogueCode.trim()) {
-        return '请填写 catalogueCode 页面分类编码';
-    }
     if (c.apiBase && !/^https:\/\//i.test(c.apiBase.trim())) {
         return '站点地址需为 https 完整 URL';
     }

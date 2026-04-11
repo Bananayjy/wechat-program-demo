@@ -1,33 +1,192 @@
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
 const export_1 = require("../../utils/export");
+const session_1 = require("../../utils/session");
 const storage_1 = require("../../utils/storage");
 const sync_1 = require("../../utils/sync");
 Page({
     data: {
         apiBase: '',
-        catalogueCode: '',
         cloudEnvId: '',
         syncEnabled: false,
+        username: '',
+        profileNick: '',
+        profileAvatarFileId: '',
+        profileAvatar: '',
+        editNick: '',
+        isLoggedIn: false,
     },
     async onShow() {
+        const s = (0, session_1.getSession)();
+        this.setData({
+            isLoggedIn: !!s,
+            username: (s === null || s === void 0 ? void 0 : s.username) || '',
+            profileNick: (s === null || s === void 0 ? void 0 : s.nickName) || '',
+            profileAvatarFileId: (s === null || s === void 0 ? void 0 : s.avatarUrl) || '',
+            profileAvatar: (s === null || s === void 0 ? void 0 : s.avatarUrl) || '',
+            editNick: (s === null || s === void 0 ? void 0 : s.nickName) || '',
+        });
+        this.renderAvatar(this.data.profileAvatarFileId);
         const c = (0, storage_1.loadSyncConfig)();
         this.setData({
             apiBase: c.apiBase,
-            catalogueCode: c.catalogueCode,
             cloudEnvId: c.cloudEnvId,
             syncEnabled: c.enabled,
         });
-        const cloudCfg = await (0, sync_1.pullSyncConfigRemote)(c);
-        if (!cloudCfg.ok || !cloudCfg.config)
+        if (s) {
+            await this.refreshProfileFromCloud();
+            const cloudCfg = await (0, sync_1.pullSyncConfigRemote)(c);
+            if (!cloudCfg.ok || !cloudCfg.config)
+                return;
+            (0, storage_1.saveSyncConfig)(cloudCfg.config);
+            this.setData({
+                apiBase: cloudCfg.config.apiBase,
+                cloudEnvId: cloudCfg.config.cloudEnvId,
+                syncEnabled: cloudCfg.config.enabled,
+            });
+        }
+    },
+    ensureLoginOrRedirect(tip = '请先登录账号') {
+        if ((0, session_1.getSession)())
+            return true;
+        wx.showToast({ title: tip, icon: 'none' });
+        setTimeout(() => {
+            wx.navigateTo({ url: '/pages/login/login' });
+        }, 300);
+        return false;
+    },
+    async refreshProfileFromCloud() {
+        const c = (0, storage_1.loadSyncConfig)();
+        const r = await (0, sync_1.fetchProfileRemote)(c);
+        if (!r.ok || !r.profile)
             return;
-        (0, storage_1.saveSyncConfig)(cloudCfg.config);
-        this.setData({
-            apiBase: cloudCfg.config.apiBase,
-            catalogueCode: cloudCfg.config.catalogueCode,
-            cloudEnvId: cloudCfg.config.cloudEnvId,
-            syncEnabled: cloudCfg.config.enabled,
+        (0, session_1.patchSessionProfile)({
+            nickName: r.profile.nickName,
+            avatarUrl: r.profile.avatarUrl,
         });
+        this.setData({
+            profileNick: r.profile.nickName,
+            profileAvatarFileId: r.profile.avatarUrl,
+            editNick: r.profile.nickName,
+            username: r.profile.username || this.data.username,
+        });
+        this.renderAvatar(r.profile.avatarUrl);
+    },
+    async renderAvatar(raw) {
+        var _a;
+        const v = raw.trim();
+        if (!v) {
+            this.setData({ profileAvatar: '' });
+            return;
+        }
+        if (v.startsWith('cloud://') && ((_a = wx.cloud) === null || _a === void 0 ? void 0 : _a.getTempFileURL)) {
+            try {
+                const res = await wx.cloud.getTempFileURL({ fileList: [v] });
+                const item = Array.isArray(res.fileList) ? res.fileList[0] : null;
+                const url = item && item.tempFileURL ? item.tempFileURL : v;
+                this.setData({ profileAvatar: url });
+                return;
+            }
+            catch (_b) {
+                /* empty */
+            }
+        }
+        this.setData({ profileAvatar: v });
+    },
+    onEditNick(e) {
+        this.setData({ editNick: e.detail.value });
+    },
+    async onChooseAvatar(e) {
+        var _a;
+        if (!this.ensureLoginOrRedirect())
+            return;
+        const temp = e.detail.avatarUrl;
+        if (!temp || !((_a = wx.cloud) === null || _a === void 0 ? void 0 : _a.uploadFile)) {
+            wx.showToast({ title: '请选择头像', icon: 'none' });
+            return;
+        }
+        const session = (0, session_1.getSession)();
+        if (!session)
+            return;
+        wx.showLoading({ title: '上传中' });
+        try {
+            const cloudPath = `user_avatars/${session.accountId}_${Date.now()}.jpg`;
+            const up = await wx.cloud.uploadFile({ cloudPath, filePath: temp });
+            const avatarUrl = up.fileID;
+            const cfg = (0, storage_1.loadSyncConfig)();
+            const nickName = this.data.editNick.trim();
+            const save = await (0, sync_1.updateProfileRemote)(cfg, { nickName, avatarUrl });
+            if (!save.ok) {
+                wx.showToast({ title: save.message, icon: 'none' });
+                return;
+            }
+            (0, session_1.patchSessionProfile)({ avatarUrl });
+            this.setData({ profileAvatarFileId: avatarUrl });
+            await this.renderAvatar(avatarUrl);
+            wx.showToast({ title: '头像已保存', icon: 'success' });
+        }
+        catch (_b) {
+            wx.showToast({ title: '上传失败', icon: 'none' });
+        }
+        finally {
+            wx.hideLoading();
+        }
+    },
+    async saveNickName() {
+        if (!this.ensureLoginOrRedirect())
+            return;
+        const nickName = this.data.editNick.trim();
+        const cfg = (0, storage_1.loadSyncConfig)();
+        const avatarUrl = this.data.profileAvatarFileId || '';
+        wx.showLoading({ title: '保存中' });
+        const save = await (0, sync_1.updateProfileRemote)(cfg, { nickName, avatarUrl });
+        wx.hideLoading();
+        if (!save.ok) {
+            wx.showToast({ title: save.message, icon: 'none' });
+            return;
+        }
+        (0, session_1.patchSessionProfile)({ nickName, avatarUrl });
+        this.setData({ profileNick: nickName });
+        wx.showToast({ title: '已保存', icon: 'success' });
+    },
+    bindWechat() {
+        if (!this.ensureLoginOrRedirect())
+            return;
+        wx.login({
+            success: () => {
+                const cfg = (0, storage_1.loadSyncConfig)();
+                void (0, sync_1.bindWechatRemote)(cfg).then((r) => {
+                    wx.showToast({
+                        title: r.ok ? '微信已绑定' : r.message,
+                        icon: r.ok ? 'success' : 'none',
+                    });
+                });
+            },
+        });
+    },
+    logout() {
+        wx.showModal({
+            title: '退出登录',
+            content: '退出后需重新登录；本机已按账号隔离的数据仍会保留。',
+            success: (res) => {
+                if (!res.confirm)
+                    return;
+                (0, session_1.clearSession)();
+                (0, storage_1.clearStorageAccountId)();
+                this.setData({
+                    isLoggedIn: false,
+                    username: '',
+                    profileNick: '',
+                    profileAvatar: '',
+                    profileAvatarFileId: '',
+                    editNick: '',
+                });
+                wx.showToast({ title: '已退出，当前为游客模式', icon: 'none' });
+            },
+        });
+    },
+    goLogin() {
+        wx.navigateTo({ url: '/pages/login/login' });
     },
     goLedgerManage() {
         wx.navigateTo({ url: '/pages/ledger-manage/ledger-manage' });
@@ -38,7 +197,7 @@ Page({
     onClearLocal() {
         wx.showModal({
             title: '清除本地数据',
-            content: '将删除本机全部流水与自定义分类，同步配置也会清空，且无法恢复。确定继续？',
+            content: '将删除当前模式下（游客或登录账号）在本机的全部流水与自定义分类，同步配置也会清空，且无法恢复。确定继续？',
             confirmText: '清除',
             confirmColor: '#e87868',
             success: (res) => {
@@ -87,9 +246,6 @@ Page({
     onApiBaseInput(e) {
         this.setData({ apiBase: e.detail.value });
     },
-    onCatalogueCodeInput(e) {
-        this.setData({ catalogueCode: e.detail.value });
-    },
     onCloudEnvInput(e) {
         this.setData({ cloudEnvId: e.detail.value });
     },
@@ -99,7 +255,6 @@ Page({
     async onSaveSync() {
         const c = {
             apiBase: this.data.apiBase.trim(),
-            catalogueCode: this.data.catalogueCode.trim(),
             cloudEnvId: this.data.cloudEnvId.trim(),
             enabled: this.data.syncEnabled,
         };
@@ -109,6 +264,10 @@ Page({
             return;
         }
         (0, storage_1.saveSyncConfig)(c);
+        if (!(0, session_1.getSession)()) {
+            wx.showToast({ title: '已保存到本地，登录后可同步到云端', icon: 'none' });
+            return;
+        }
         const remote = await (0, sync_1.saveSyncConfigRemote)(c);
         wx.showToast({
             title: remote.ok ? '本地和云端已保存' : `本地已保存，云端失败：${remote.message}`,
@@ -116,12 +275,16 @@ Page({
         });
     },
     async onPush() {
+        if (!this.ensureLoginOrRedirect('上传前请先登录账号'))
+            return;
         wx.showLoading({ title: '上传中' });
         const r = await (0, sync_1.pushToRemote)();
         wx.hideLoading();
         wx.showToast({ title: r.message, icon: r.ok ? 'success' : 'none' });
     },
     async onPull() {
+        if (!this.ensureLoginOrRedirect('拉取前请先登录账号'))
+            return;
         wx.showLoading({ title: '拉取中' });
         const r = await (0, sync_1.pullFromRemote)();
         wx.hideLoading();

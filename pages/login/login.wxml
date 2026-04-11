@@ -1,0 +1,45 @@
+<view class="page safe-bottom">
+  <view class="hero">
+    <text class="hero-title">日常记账</text>
+    <text class="hero-sub">使用账号登录，数据按账号隔离保存</text>
+  </view>
+
+  <view class="card">
+    <view class="field">
+      <text class="label">用户名</text>
+      <input
+        class="input"
+        placeholder="2～32 个字符"
+        value="{{username}}"
+        bindinput="onUsername"
+      />
+    </view>
+    <view class="field">
+      <text class="label">密码</text>
+      <input
+        class="input"
+        password
+        placeholder="至少 6 位"
+        value="{{password}}"
+        bindinput="onPassword"
+      />
+    </view>
+    <view class="field">
+      <text class="label">云环境 ID（可选）</text>
+      <input
+        class="input"
+        placeholder="与云开发控制台一致，可登录后再填"
+        value="{{cloudEnvId}}"
+        bindinput="onCloudEnv"
+      />
+    </view>
+
+    <button class="btn-primary" loading="{{loading}}" disabled="{{loading}}" bindtap="submit">
+      {{mode === 'login' ? '登录' : '注册'}}
+    </button>
+
+    <view class="switch-row" bindtap="switchMode">
+      <text class="link">{{mode === 'login' ? '没有账号？去注册' : '已有账号？去登录'}}</text>
+    </view>
+  </view>
+</view>

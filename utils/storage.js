@@ -1,5 +1,9 @@
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
+exports.GUEST_ACCOUNT_ID = void 0;
+exports.setStorageAccountId = setStorageAccountId;
+exports.getStorageAccountId = getStorageAccountId;
+exports.clearStorageAccountId = clearStorageAccountId;
 exports.getDefaultCategories = getDefaultCategories;
 exports.loadLedgers = loadLedgers;
 exports.getCurrentBookId = getCurrentBookId;
@@ -28,71 +32,70 @@ exports.buildFullSyncPayload = buildFullSyncPayload;
 exports.applyFullSyncPayload = applyFullSyncPayload;
 exports.clearAllLocalAccountData = clearAllLocalAccountData;
 exports.uid = uid;
-const KEY_CATEGORIES = 'accountbook_categories_v1';
-const KEY_TRANSACTIONS = 'accountbook_transactions_v1';
-const KEY_LEDGERS = 'accountbook_ledgers_v1';
-const KEY_CURRENT_BOOK = 'accountbook_current_book_v1';
-const KEY_SYNC_CONFIG = 'accountbook_sync_config_v1';
-function txKey(bookId) {
-    return `accountbook_transactions_v1_${bookId}`;
+let storageAccountId = null;
+exports.GUEST_ACCOUNT_ID = 'guest_local';
+/** 登录成功后必须调用，之后所有账本读写均隔离在该账号下 */
+function setStorageAccountId(id) {
+    storageAccountId = id;
+    migrationDoneForAccount = '';
 }
-function catKey(bookId) {
-    return `accountbook_categories_v1_${bookId}`;
+function getStorageAccountId() {
+    return storageAccountId;
+}
+function clearStorageAccountId() {
+    storageAccountId = null;
+    migrationDoneForAccount = '';
+}
+function requireAccountId() {
+    return storageAccountId || exports.GUEST_ACCOUNT_ID;
+}
+function keyLedgers(accountId) {
+    return `accountbook_ledgers_v1_${accountId}`;
+}
+function keyCurrentBook(accountId) {
+    return `accountbook_current_book_v1_${accountId}`;
+}
+function keySyncConfig(accountId) {
+    return `accountbook_sync_config_v1_${accountId}`;
+}
+function txKey(accountId, bookId) {
+    return `accountbook_transactions_v1_${accountId}_${bookId}`;
+}
+function catKey(accountId, bookId) {
+    return `accountbook_categories_v1_${accountId}_${bookId}`;
 }
 function uid() {
     return `${Date.now()}_${Math.random().toString(36).slice(2, 11)}`;
 }
-let migrationDone = false;
-function runMigrationOnce() {
-    if (migrationDone)
+let migrationDoneForAccount = '';
+function initAccountIfEmpty(accountId) {
+    if (migrationDoneForAccount === accountId)
         return;
-    migrationDone = true;
+    migrationDoneForAccount = accountId;
     try {
-        const rawLedgers = wx.getStorageSync(KEY_LEDGERS);
+        const rawLedgers = wx.getStorageSync(keyLedgers(accountId));
         if (rawLedgers !== undefined && rawLedgers !== null && rawLedgers !== '') {
             const parsed = typeof rawLedgers === 'string' ? JSON.parse(rawLedgers) : rawLedgers;
             if (Array.isArray(parsed) && parsed.length > 0)
                 return;
         }
-        const legacyTxRaw = wx.getStorageSync(KEY_TRANSACTIONS);
-        const legacyCatRaw = wx.getStorageSync(KEY_CATEGORIES);
-        let legacyTxs = [];
-        if (legacyTxRaw) {
-            const list = typeof legacyTxRaw === 'string' ? JSON.parse(legacyTxRaw) : legacyTxRaw;
-            legacyTxs = Array.isArray(list) ? list : [];
-        }
-        let legacyCats = [];
-        if (legacyCatRaw) {
-            const list = typeof legacyCatRaw === 'string' ? JSON.parse(legacyCatRaw) : legacyCatRaw;
-            legacyCats = Array.isArray(list) ? list : [];
-        }
         const bookId = uid();
         const now = Date.now();
         const ledger = { id: bookId, name: '默认账本', createdAt: now };
-        wx.setStorageSync(KEY_LEDGERS, [ledger]);
-        wx.setStorageSync(KEY_CURRENT_BOOK, bookId);
-        const cats = legacyCats.length > 0 ? legacyCats : getDefaultCategories();
-        wx.setStorageSync(catKey(bookId), cats);
-        wx.setStorageSync(txKey(bookId), legacyTxs);
-        try {
-            wx.removeStorageSync(KEY_TRANSACTIONS);
-        }
-        catch (_a) {
-            /* empty */
-        }
-        try {
-            wx.removeStorageSync(KEY_CATEGORIES);
-        }
-        catch (_b) {
-            /* empty */
-        }
+        wx.setStorageSync(keyLedgers(accountId), [ledger]);
+        wx.setStorageSync(keyCurrentBook(accountId), bookId);
+        wx.setStorageSync(catKey(accountId, bookId), getDefaultCategories());
+        wx.setStorageSync(txKey(accountId, bookId), []);
     }
-    catch (_c) {
-        migrationDone = false;
+    catch (_a) {
+        migrationDoneForAccount = '';
     }
 }
 function ensureStorageReady() {
-    runMigrationOnce();
+    const aid = requireAccountId();
+    if (!aid)
+        return;
+    initAccountIfEmpty(aid);
 }
 const DEFAULT_EXPENSE = [
     { id: 'c_exp_food', name: '餐饮', type: 'expense' },
@@ -110,9 +113,12 @@ function getDefaultCategories() {
     return [...DEFAULT_EXPENSE, ...DEFAULT_INCOME];
 }
 function loadLedgers() {
+    const aid = requireAccountId();
+    if (!aid)
+        return [];
     ensureStorageReady();
     try {
-        const raw = wx.getStorageSync(KEY_LEDGERS);
+        const raw = wx.getStorageSync(keyLedgers(aid));
         if (!raw)
             return [];
         const list = typeof raw === 'string' ? JSON.parse(raw) : raw;
@@ -123,19 +129,25 @@ function loadLedgers() {
     }
 }
 function saveLedgersInternal(list) {
-    wx.setStorageSync(KEY_LEDGERS, list);
+    const aid = requireAccountId();
+    if (!aid)
+        return;
+    wx.setStorageSync(keyLedgers(aid), list);
 }
 function getCurrentBookId() {
     var _a;
+    const aid = requireAccountId();
+    if (!aid)
+        return '';
     ensureStorageReady();
     try {
-        const id = wx.getStorageSync(KEY_CURRENT_BOOK);
+        const id = wx.getStorageSync(keyCurrentBook(aid));
         const ledgers = loadLedgers();
         if (id && ledgers.some((l) => l.id === id))
             return id;
         const first = (_a = ledgers[0]) === null || _a === void 0 ? void 0 : _a.id;
         if (first) {
-            wx.setStorageSync(KEY_CURRENT_BOOK, first);
+            wx.setStorageSync(keyCurrentBook(aid), first);
             return first;
         }
         return '';
@@ -145,21 +157,28 @@ function getCurrentBookId() {
     }
 }
 function setCurrentBookId(id) {
+    const aid = requireAccountId();
+    if (!aid)
+        return;
     ensureStorageReady();
     const ledgers = loadLedgers();
     if (!ledgers.some((l) => l.id === id))
         return;
-    wx.setStorageSync(KEY_CURRENT_BOOK, id);
+    wx.setStorageSync(keyCurrentBook(aid), id);
 }
 function addLedger(name) {
+    const aid = requireAccountId();
+    if (!aid) {
+        throw new Error('未登录');
+    }
     ensureStorageReady();
     const trimmed = name.trim() || '新账本';
     const item = { id: uid(), name: trimmed, createdAt: Date.now() };
     const list = loadLedgers();
     list.push(item);
     saveLedgersInternal(list);
-    wx.setStorageSync(catKey(item.id), getDefaultCategories());
-    wx.setStorageSync(txKey(item.id), []);
+    wx.setStorageSync(catKey(aid, item.id), getDefaultCategories());
+    wx.setStorageSync(txKey(aid, item.id), []);
     return item;
 }
 function renameLedger(id, name) {
@@ -202,6 +221,9 @@ function updateLedgerCover(id, localPath) {
 }
 function removeLedger(id) {
     var _a;
+    const aid = requireAccountId();
+    if (!aid)
+        return { ok: false, message: '未登录' };
     ensureStorageReady();
     const list = loadLedgers();
     if (list.length <= 1) {
@@ -217,13 +239,13 @@ function removeLedger(id) {
     const next = list.filter((l) => l.id !== id);
     saveLedgersInternal(next);
     try {
-        wx.removeStorageSync(txKey(id));
+        wx.removeStorageSync(txKey(aid, id));
     }
     catch (_b) {
         /* empty */
     }
     try {
-        wx.removeStorageSync(catKey(id));
+        wx.removeStorageSync(catKey(aid, id));
     }
     catch (_c) {
         /* empty */
@@ -232,14 +254,17 @@ function removeLedger(id) {
     if (cur === id) {
         const first = (_a = next[0]) === null || _a === void 0 ? void 0 : _a.id;
         if (first)
-            wx.setStorageSync(KEY_CURRENT_BOOK, first);
+            wx.setStorageSync(keyCurrentBook(aid), first);
     }
     return { ok: true };
 }
 function loadCategoriesForBook(bookId) {
+    const aid = requireAccountId();
+    if (!aid)
+        return getDefaultCategories();
     ensureStorageReady();
     try {
-        const raw = wx.getStorageSync(catKey(bookId));
+        const raw = wx.getStorageSync(catKey(aid, bookId));
         if (!raw)
             return getDefaultCategories();
         const list = typeof raw === 'string' ? JSON.parse(raw) : raw;
@@ -252,13 +277,19 @@ function loadCategoriesForBook(bookId) {
     }
 }
 function saveCategoriesForBook(bookId, list) {
+    const aid = requireAccountId();
+    if (!aid)
+        return;
     ensureStorageReady();
-    wx.setStorageSync(catKey(bookId), list);
+    wx.setStorageSync(catKey(aid, bookId), list);
 }
 function loadTransactionsForBook(bookId) {
+    const aid = requireAccountId();
+    if (!aid)
+        return [];
     ensureStorageReady();
     try {
-        const raw = wx.getStorageSync(txKey(bookId));
+        const raw = wx.getStorageSync(txKey(aid, bookId));
         if (!raw)
             return [];
         const list = typeof raw === 'string' ? JSON.parse(raw) : raw;
@@ -269,8 +300,11 @@ function loadTransactionsForBook(bookId) {
     }
 }
 function saveTransactionsForBook(bookId, list) {
+    const aid = requireAccountId();
+    if (!aid)
+        return;
     ensureStorageReady();
-    wx.setStorageSync(txKey(bookId), list);
+    wx.setStorageSync(txKey(aid, bookId), list);
 }
 function loadCategories() {
     return loadCategoriesForBook(getCurrentBookId());
@@ -340,34 +374,38 @@ function normalizeSyncConfig(raw) {
     const parsed = (raw || {});
     const apiBaseRaw = (_a = parsed.apiBase) !== null && _a !== void 0 ? _a : parsed.baseUrl;
     const cloudEnvIdRaw = parsed.cloudEnvId;
-    const catalogueCodeRaw = parsed.catalogueCode;
     const apiBase = typeof apiBaseRaw === 'string' && apiBaseRaw.startsWith('http')
         ? apiBaseRaw.trim()
         : '';
     const cloudEnvId = typeof cloudEnvIdRaw === 'string' ? cloudEnvIdRaw.trim() : '';
-    const catalogueCode = typeof catalogueCodeRaw === 'string' ? catalogueCodeRaw.trim() : '';
     return {
         apiBase,
         enabled: !!parsed.enabled,
-        catalogueCode,
         cloudEnvId,
     };
 }
 function loadSyncConfig() {
+    const aid = requireAccountId();
+    if (!aid) {
+        return { apiBase: '', enabled: false, cloudEnvId: '' };
+    }
     try {
-        const raw = wx.getStorageSync(KEY_SYNC_CONFIG);
+        const raw = wx.getStorageSync(keySyncConfig(aid));
         if (!raw) {
-            return { apiBase: '', enabled: false, catalogueCode: '', cloudEnvId: '' };
+            return { apiBase: '', enabled: false, cloudEnvId: '' };
         }
         const parsed = typeof raw === 'string' ? JSON.parse(raw) : raw;
         return normalizeSyncConfig(parsed);
     }
     catch (_a) {
-        return { apiBase: '', enabled: false, catalogueCode: '', cloudEnvId: '' };
+        return { apiBase: '', enabled: false, cloudEnvId: '' };
     }
 }
 function saveSyncConfig(c) {
-    wx.setStorageSync(KEY_SYNC_CONFIG, normalizeSyncConfig(c));
+    const aid = requireAccountId();
+    if (!aid)
+        return;
+    wx.setStorageSync(keySyncConfig(aid), normalizeSyncConfig(c));
 }
 function buildFullSyncPayload() {
     ensureStorageReady();
@@ -399,30 +437,48 @@ function applyFullSyncPayload(data) {
     const cur = getCurrentBookId();
     const ledgers = loadLedgers();
     if (!ledgers.some((l) => l.id === cur) && ledgers[0]) {
-        wx.setStorageSync(KEY_CURRENT_BOOK, ledgers[0].id);
+        const aid = requireAccountId();
+        if (aid)
+            wx.setStorageSync(keyCurrentBook(aid), ledgers[0].id);
     }
 }
-/** 移除本应用全部本地键（流水、分类、账本、同步配置）；下次 load 时与首次安装一致 */
+/** 移除当前账号下全部本地键（流水、分类、账本、同步配置） */
 function clearAllLocalAccountData() {
-    ensureStorageReady();
+    const aid = requireAccountId();
+    if (!aid)
+        return;
+    const ledgerIds = [];
+    try {
+        const raw = wx.getStorageSync(keyLedgers(aid));
+        if (raw) {
+            const list = typeof raw === 'string' ? JSON.parse(raw) : raw;
+            if (Array.isArray(list)) {
+                for (const l of list) {
+                    if (l && l.id)
+                        ledgerIds.push(l.id);
+                }
+            }
+        }
+    }
+    catch (_a) {
+        /* empty */
+    }
     const keysToRemove = new Set([
-        KEY_TRANSACTIONS,
-        KEY_CATEGORIES,
-        KEY_LEDGERS,
-        KEY_CURRENT_BOOK,
-        KEY_SYNC_CONFIG,
+        keyLedgers(aid),
+        keyCurrentBook(aid),
+        keySyncConfig(aid),
     ]);
-    for (const l of loadLedgers()) {
-        keysToRemove.add(txKey(l.id));
-        keysToRemove.add(catKey(l.id));
+    for (const id of ledgerIds) {
+        keysToRemove.add(txKey(aid, id));
+        keysToRemove.add(catKey(aid, id));
     }
     for (const k of keysToRemove) {
         try {
             wx.removeStorageSync(k);
         }
-        catch (_a) {
+        catch (_b) {
             /* empty */
         }
     }
-    migrationDone = false;
+    migrationDoneForAccount = '';
 }

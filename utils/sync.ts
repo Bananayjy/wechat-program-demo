@@ -8,6 +8,37 @@ import {
 import type { Ledger } from './types';
 import { callCloudPath } from './cloudSync';
 
+export interface UserProfileRemote {
+  username: string;
+  nickName: string;
+  avatarUrl: string;
+}
+
+export async function fetchProfileRemote(
+  cfg: SyncConfig
+): Promise<{ ok: boolean; message: string; profile?: UserProfileRemote }> {
+  const res = await callCloudPath<UserProfileRemote>('/user/profile/get', {}, cfg);
+  if (!res.ok || !res.data) return { ok: false, message: res.message };
+  return { ok: true, message: res.message, profile: res.data };
+}
+
+export async function updateProfileRemote(
+  cfg: SyncConfig,
+  patch: { nickName: string; avatarUrl: string }
+): Promise<{ ok: boolean; message: string }> {
+  const res = await callCloudPath(
+    '/user/profile/update',
+    patch as unknown as Record<string, unknown>,
+    cfg
+  );
+  return { ok: res.ok, message: res.message };
+}
+
+export async function bindWechatRemote(cfg: SyncConfig): Promise<{ ok: boolean; message: string }> {
+  const res = await callCloudPath('/wechat/bind', {}, cfg);
+  return { ok: res.ok, message: res.message };
+}
+
 /** 云开发同步入口：业务路径统一以 / 开头，不含 /kapi。 */
 const UPLOAD_TX_CHUNK_SIZE = 120;
 const PULL_TX_CHUNK_SIZE = 120;
@@ -179,9 +210,6 @@ function splitChunks<T>(list: T[], chunkSize: number): T[][] {
 /** 业务路径需以 / 开头；站点根需为 https 完整地址 */
 export function validateSyncConfig(c: SyncConfig): string | null {
   if (!c.enabled) return null;
-  if (!c.catalogueCode || !c.catalogueCode.trim()) {
-    return '请填写 catalogueCode 页面分类编码';
-  }
   if (c.apiBase && !/^https:\/\//i.test(c.apiBase.trim())) {
     return '站点地址需为 https 完整 URL';
   }

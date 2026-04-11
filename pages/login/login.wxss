@@ -1,0 +1,75 @@
+.page {
+  padding: 48rpx 32rpx;
+  min-height: 100vh;
+  background: linear-gradient(180deg, #fffbea 0%, #fffef8 40%, #ffffff 100%);
+}
+
+.hero {
+  margin-bottom: 48rpx;
+}
+
+.hero-title {
+  display: block;
+  font-size: 44rpx;
+  font-weight: 800;
+  color: #5c4a42;
+  margin-bottom: 16rpx;
+}
+
+.hero-sub {
+  font-size: 26rpx;
+  color: #a89878;
+  line-height: 1.5;
+}
+
+.card {
+  background: #fff;
+  border-radius: 24rpx;
+  padding: 36rpx 28rpx 28rpx;
+  box-shadow: 0 8rpx 32rpx rgba(232, 160, 16, 0.12);
+}
+
+.field {
+  margin-bottom: 28rpx;
+}
+
+.label {
+  font-size: 24rpx;
+  color: #a89878;
+  margin-bottom: 12rpx;
+  display: block;
+}
+
+.input {
+  background: rgba(255, 224, 130, 0.22);
+  border-radius: 20rpx;
+  padding: 22rpx 24rpx;
+  font-size: 28rpx;
+  border: 2rpx solid rgba(255, 193, 7, 0.2);
+}
+
+.btn-primary {
+  margin-top: 16rpx;
+  background: linear-gradient(135deg, #f0b429 0%, #e8a010 100%);
+  color: #fff;
+  font-weight: 700;
+  font-size: 30rpx;
+  border-radius: 999rpx;
+  padding: 22rpx;
+  border: none;
+}
+
+.btn-primary::after {
+  border: none;
+}
+
+.switch-row {
+  margin-top: 32rpx;
+  text-align: center;
+}
+
+.link {
+  font-size: 26rpx;
+  color: #d48c00;
+  font-weight: 600;
+}

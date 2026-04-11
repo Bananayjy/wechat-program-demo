@@ -1,6 +1,8 @@
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.callCloudPath = callCloudPath;
+exports.callCloudPublicPath = callCloudPublicPath;
+const session_1 = require("./session");
 const SYNC_FUNCTION_NAME = 'accountbookSync';
 function resolveCloudEnv(cfg) {
     var _a;
@@ -18,15 +20,14 @@ async function callCloudPath(path, payload, cfg) {
             data: {
                 path,
                 payload,
-                catalogueCode: cfg.catalogueCode || '',
                 clientTs: Date.now(),
+                authToken: (0, session_1.getAuthToken)(),
             },
         };
         if (cloudEnv) {
             args.config = { env: cloudEnv };
         }
         const res = (await callFunctionWithFallback(args, !!cloudEnv));
-        console.log("callCloud res:" + JSON.stringify(res));
         const raw = (res.result || {});
         const hasResultPayload = raw && Object.keys(raw).length > 0;
         const normalizedMessage = raw.message ||
@@ -34,8 +35,13 @@ async function callCloudPath(path, payload, cfg) {
             raw.errmsg ||
             raw.error ||
             '';
-        const statusCode = res.errMsg === 'cloud.callFunction:ok' ? 200 : 500;
-        const ok = statusCode >= 200 && statusCode < 300;
+        const hasStatus = typeof raw.statusCode === 'number' && Number.isFinite(raw.statusCode);
+        const statusCode = hasStatus
+            ? raw.statusCode
+            : raw.ok
+                ? 200
+                : 500;
+        const ok = !!raw.ok && statusCode >= 200 && statusCode < 300;
         return {
             ok,
             statusCode,
@@ -69,4 +75,12 @@ async function callFunctionWithFallback(args, hasCustomEnv) {
         delete retryArgs.config;
         return await wx.cloud.callFunction(retryArgs);
     }
+}
+/** 未登录也可调用的云路径（如 /auth/login），仅需云环境 ID */
+async function callCloudPublicPath(path, payload, cloudEnvId = '') {
+    return callCloudPath(path, payload, {
+        apiBase: '',
+        enabled: false,
+        cloudEnvId: cloudEnvId.trim(),
+    });
 }

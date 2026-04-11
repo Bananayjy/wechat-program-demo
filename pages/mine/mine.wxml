@@ -1,4 +1,46 @@
 <view class="page safe-bottom">
+  <view class="profile-card">
+    <view wx:if="{{isLoggedIn}}">
+      <view class="profile-main">
+        <button class="avatar-wrap" open-type="chooseAvatar" bindchooseavatar="onChooseAvatar">
+          <image
+            wx:if="{{profileAvatar}}"
+            class="avatar-img"
+            src="{{profileAvatar}}"
+            mode="aspectFill"
+          />
+          <view wx:else class="avatar-placeholder">头像</view>
+        </button>
+        <view class="profile-text">
+          <text class="profile-name">{{profileNick || username || '未设置昵称'}}</text>
+          <text class="profile-user muted" wx:if="{{username}}">@{{username}}</text>
+        </view>
+      </view>
+      <view class="nick-row">
+        <text class="label">微信昵称</text>
+        <input
+          class="input nick-input"
+          type="nickname"
+          placeholder="填写昵称"
+          value="{{editNick}}"
+          bindinput="onEditNick"
+          bindblur="saveNickName"
+        />
+      </view>
+      <view class="profile-actions">
+        <button class="btn-tiny" size="mini" bindtap="bindWechat">同步微信绑定</button>
+        <button class="btn-tiny btn-danger" size="mini" bindtap="logout">退出登录</button>
+      </view>
+    </view>
+    <view wx:else>
+      <text class="profile-name">游客模式</text>
+      <text class="profile-user muted">可直接记账，数据仅保存在本机</text>
+      <view class="profile-actions guest-actions">
+        <button class="btn-tiny btn-login" size="mini" bindtap="goLogin">登录账号</button>
+      </view>
+    </view>
+  </view>
+
   <view class="card cell" bindtap="goLedgerManage">
     <text>账本管理</text>
     <text class="chev">›</text>
@@ -18,20 +60,11 @@
     <text>清除本地数据</text>
     <text class="chev">›</text>
   </view>
-  <text class="text-muted clear-hint">将删除本机全部流水与自定义分类，同步配置也会清空，且无法恢复</text>
+  <text class="text-muted clear-hint">将删除当前模式（游客或登录账号）在本机的流水与自定义分类，同步配置也会清空，且无法恢复</text>
 
   <view class="card">
     <text class="block-title">数据同步（可选）</text>
     <text class="text-muted sub">使用云开发云函数；业务路径以 / 开头，不含 /kapi</text>
-    <view class="field">
-      <text class="label">catalogueCode 页面分类编码</text>
-      <input
-        class="input"
-        placeholder="请输入页面分类编码"
-        value="{{catalogueCode}}"
-        bindinput="onCatalogueCodeInput"
-      />
-    </view>
     <view class="field">
       <text class="label">云环境 ID（可选）</text>
       <input

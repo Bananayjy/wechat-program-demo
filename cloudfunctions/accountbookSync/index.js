@@ -1,4 +1,6 @@
 const cloud = require('wx-server-sdk');
+const bcrypt = require('bcryptjs');
+const jwt = require('jsonwebtoken');
 
 cloud.init({ env: cloud.DYNAMIC_CURRENT_ENV });
 
@@ -8,6 +10,12 @@ const LEDGER_COLLECTION = 'accountbook_ledgers';
 const CATEGORY_COLLECTION = 'accountbook_categories';
 const TRANSACTION_COLLECTION = 'accountbook_transactions';
 const CONFIG_COLLECTION = 'accountbook_sync_configs';
+const USER_COLLECTION = 'app_users';
+const WECHAT_BINDING_COLLECTION = 'wechat_bindings';
+
+// const JWT_SECRET = process.env.JWT_SECRET || '';
+const JWT_SECRET = '6';
+const JWT_EXPIRES_SEC = 6 * 60 * 60;
 
 function ok(data, message = 'ok', statusCode = 200) {
   return { ok: true, statusCode, message, data };
@@ -23,12 +31,6 @@ function normalizeArray(value) {
 
 function asObject(payload) {
   return payload && typeof payload === 'object' ? payload : {};
-}
-
-function sanitizeCatalogueCode(code) {
-  const v = typeof code === 'string' ? code.trim() : '';
-  if (!v) throw new Error('catalogueCode 不能为空');
-  return v;
 }
 
 function sanitizeBookId(bookId) {
@@ -92,22 +94,15 @@ async function removeByQueryInBatches(collection, where, batchSize = 100) {
   }
 }
 
-function scoped(openid, catalogueCode) {
-  return { openid, catalogueCode: sanitizeCatalogueCode(catalogueCode) };
+function scoped(accountId) {
+  return { accountId };
 }
 
-function sanitizeConfig(payload, fallbackCatalogueCode) {
+function sanitizeConfig(payload) {
   const source = payload && typeof payload === 'object' ? payload : {};
   const apiBase = typeof source.apiBase === 'string' ? source.apiBase.trim() : '';
   const cloudEnvId = typeof source.cloudEnvId === 'string' ? source.cloudEnvId.trim() : '';
-  const catalogueCodeRaw =
-    typeof source.catalogueCode === 'string' ? source.catalogueCode : fallbackCatalogueCode;
-  const catalogueCode = (catalogueCodeRaw || '').trim();
   const enabled = !!source.enabled;
-
-  if (enabled && !catalogueCode) {
-    throw new Error('catalogueCode 不能为空');
-  }
   if (apiBase && !/^https:\/\//i.test(apiBase)) {
     throw new Error('apiBase 必须为 https 完整地址');
   }
@@ -115,22 +110,194 @@ function sanitizeConfig(payload, fallbackCatalogueCode) {
   return {
     apiBase,
     cloudEnvId,
-    catalogueCode,
     enabled,
   };
 }
 
-async function handleSaveConfig(openid, payload, catalogueCode, clientTs) {
-  const cfg = sanitizeConfig(payload, catalogueCode);
+function assertJwtSecret() {
+  if (!JWT_SECRET) {
+    throw new Error('云函数未配置环境变量 JWT_SECRET');
+  }
+}
+
+function signToken(accountId) {
+  assertJwtSecret();
+  return jwt.sign({ accountId }, JWT_SECRET, { expiresIn: JWT_EXPIRES_SEC });
+}
+
+function verifyAuthToken(authToken) {
+  if (!authToken || typeof authToken !== 'string') return null;
+  assertJwtSecret();
+  try {
+    const decoded = jwt.verify(authToken, JWT_SECRET);
+    const id = decoded && decoded.accountId;
+    return typeof id === 'string' && id ? id : null;
+  } catch {
+    return null;
+  }
+}
+
+function sanitizeUsername(u) {
+  const v = typeof u === 'string' ? u.trim() : '';
+  if (v.length < 2 || v.length > 32) throw new Error('用户名为 2～32 个字符');
+  return v;
+}
+
+function sanitizePassword(p) {
+  const v = typeof p === 'string' ? p : '';
+  if (v.length < 6) throw new Error('密码至少 6 位');
+  return v;
+}
+
+async function handleRegister(payload) {
+  const p = asObject(payload);
+  const username = sanitizeUsername(p.username);
+  const password = sanitizePassword(p.password);
+
+  const dup = await db.collection(USER_COLLECTION).where({ username }).limit(1).get();
+  if (dup.data.length > 0) {
+    return fail('该用户名已被注册', 409);
+  }
+
+  const passwordHash = bcrypt.hashSync(password, 10);
+  const addRes = await db.collection(USER_COLLECTION).add({
+    data: {
+      username,
+      passwordHash,
+      nickName: '',
+      avatarUrl: '',
+      createdAt: db.serverDate(),
+    },
+  });
+  const accountId = addRes._id;
+  const token = signToken(accountId);
+  const expiresAt = Date.now() + JWT_EXPIRES_SEC * 1000;
+
+  return ok(
+    {
+      token,
+      expiresAt,
+      accountId,
+      username,
+      nickName: '',
+      avatarUrl: '',
+    },
+    '注册成功'
+  );
+}
+
+async function handleLogin(payload) {
+  const p = asObject(payload);
+  const username = sanitizeUsername(p.username);
+  const password = sanitizePassword(p.password);
+
+  const found = await db.collection(USER_COLLECTION).where({ username }).limit(1).get();
+  if (found.data.length === 0) {
+    return fail('用户名或密码错误', 401);
+  }
+  const row = found.data[0];
+  if (!bcrypt.compareSync(password, row.passwordHash || '')) {
+    return fail('用户名或密码错误', 401);
+  }
+  const accountId = row._id;
+  const token = signToken(accountId);
+  const expiresAt = Date.now() + JWT_EXPIRES_SEC * 1000;
+
+  return ok(
+    {
+      token,
+      expiresAt,
+      accountId,
+      username: row.username,
+      nickName: typeof row.nickName === 'string' ? row.nickName : '',
+      avatarUrl: typeof row.avatarUrl === 'string' ? row.avatarUrl : '',
+    },
+    '登录成功'
+  );
+}
+
+async function handleProfileUpdate(accountId, payload) {
+  const p = asObject(payload);
+  const nickName = typeof p.nickName === 'string' ? p.nickName.trim().slice(0, 32) : '';
+  const avatarUrl = typeof p.avatarUrl === 'string' ? p.avatarUrl.trim().slice(0, 500) : '';
+
+  const found = await db.collection(USER_COLLECTION).doc(accountId).get();
+  if (!found.data || Object.keys(found.data).length === 0) {
+    return fail('用户不存在', 404);
+  }
+
+  await db.collection(USER_COLLECTION).doc(accountId).update({
+    data: {
+      nickName,
+      avatarUrl,
+      profileUpdatedAt: db.serverDate(),
+    },
+  });
+
+  return ok({ nickName, avatarUrl }, '资料已更新');
+}
+
+async function handleProfileGet(accountId) {
+  const found = await db.collection(USER_COLLECTION).doc(accountId).get();
+  if (!found.data || Object.keys(found.data).length === 0) {
+    return fail('用户不存在', 404);
+  }
+  const row = found.data;
+  return ok(
+    {
+      username: typeof row.username === 'string' ? row.username : '',
+      nickName: typeof row.nickName === 'string' ? row.nickName : '',
+      avatarUrl: typeof row.avatarUrl === 'string' ? row.avatarUrl : '',
+    },
+    'ok'
+  );
+}
+
+async function handleWechatBind(accountId) {
+  const ctx = cloud.getWXContext();
+  const openid = ctx.OPENID;
+  if (!openid) {
+    return fail('未获取到微信身份', 401);
+  }
+
+  const existingOpenid = await db.collection(WECHAT_BINDING_COLLECTION).where({ openid }).limit(1).get();
+  if (existingOpenid.data.length > 0) {
+    const row = existingOpenid.data[0];
+    if (row.accountId !== accountId) {
+      return fail('该微信已绑定其他账号', 409);
+    }
+    return ok({ bound: true, accountId }, '已绑定');
+  }
+
+  const existingAcc = await db.collection(WECHAT_BINDING_COLLECTION).where({ accountId }).limit(1).get();
+  if (existingAcc.data.length > 0) {
+    await db.collection(WECHAT_BINDING_COLLECTION).doc(existingAcc.data[0]._id).update({
+      data: { openid, updatedAt: db.serverDate() },
+    });
+  } else {
+    await db.collection(WECHAT_BINDING_COLLECTION).add({
+      data: {
+        openid,
+        accountId,
+        createdAt: db.serverDate(),
+      },
+    });
+  }
+
+  return ok({ bound: true, accountId }, '微信已绑定');
+}
+
+async function handleSaveConfig(accountId, payload, clientTs) {
+  const cfg = sanitizeConfig(payload);
   const existing = await db
     .collection(CONFIG_COLLECTION)
-    .where({ openid })
+    .where({ accountId })
     .limit(1)
     .get();
 
   const doc = {
     ...cfg,
-    openid,
+    accountId,
     clientTs: Number(clientTs) || Date.now(),
     lastOp: 'saveConfig',
     updatedAt: db.serverDate(),
@@ -143,9 +310,9 @@ async function handleSaveConfig(openid, payload, catalogueCode, clientTs) {
   return ok({ savedAt: Date.now() }, '配置已保存');
 }
 
-async function handleSyncReset(openid, payload, catalogueCode, clientTs) {
+async function handleSyncReset(accountId, payload, clientTs) {
   const source = asObject(payload);
-  const scope = scoped(openid, catalogueCode);
+  const scope = scoped(accountId);
   const ledgers = sanitizeLedgers(source.ledgers);
   const bookIds = normalizeArray(source.bookIds).map((item) => String(item)).filter(Boolean);
 
@@ -163,13 +330,12 @@ async function handleSyncReset(openid, payload, catalogueCode, clientTs) {
 
   await upsertOne(
     CONFIG_COLLECTION,
-    { openid },
+    { accountId },
     {
       clientTs: Number(clientTs) || Date.now(),
       lastOp: 'syncReset',
       latestBookIds: bookIds,
       latestClientTime: Number(source.clientTime) || Date.now(),
-      catalogueCode: scope.catalogueCode,
       updatedAt: db.serverDate(),
     }
   );
@@ -177,9 +343,9 @@ async function handleSyncReset(openid, payload, catalogueCode, clientTs) {
   return ok({ reset: true, books: bookIds.length }, '重置成功');
 }
 
-async function handleSyncBookReset(openid, payload, catalogueCode, clientTs) {
+async function handleSyncBookReset(accountId, payload, clientTs) {
   const source = asObject(payload);
-  const scope = scoped(openid, catalogueCode);
+  const scope = scoped(accountId);
   const bookId = sanitizeBookId(source.bookId);
   const categories = sanitizeCategories(source.categories);
   const ledger = source.ledger && source.ledger.id ? sanitizeLedgers([source.ledger])[0] : null;
@@ -210,9 +376,9 @@ async function handleSyncBookReset(openid, payload, catalogueCode, clientTs) {
   return ok({ reset: true, bookId }, '账本已重置');
 }
 
-async function handleSyncBookChunk(openid, payload, catalogueCode, clientTs) {
+async function handleSyncBookChunk(accountId, payload, clientTs) {
   const source = asObject(payload);
-  const scope = scoped(openid, catalogueCode);
+  const scope = scoped(accountId);
   const bookId = sanitizeBookId(source.bookId);
   const transactions = sanitizeTransactions(source.transactions);
 
@@ -232,9 +398,9 @@ async function handleSyncBookChunk(openid, payload, catalogueCode, clientTs) {
   return ok({ accepted: transactions.length, bookId }, '分片写入成功');
 }
 
-async function handleSyncPrune(openid, payload, catalogueCode) {
+async function handleSyncPrune(accountId, payload) {
   const source = asObject(payload);
-  const scope = scoped(openid, catalogueCode);
+  const scope = scoped(accountId);
   const bookIds = normalizeArray(source.bookIds).map((item) => String(item)).filter(Boolean);
   if (bookIds.length === 0) {
     await removeByQueryInBatches(LEDGER_COLLECTION, scope, 100);
@@ -250,15 +416,12 @@ async function handleSyncPrune(openid, payload, catalogueCode) {
   return ok({ pruned: true, books: bookIds.length }, '清理成功');
 }
 
-async function handlePullMeta(openid, catalogueCode) {
-  const scope = scoped(openid, catalogueCode);
+async function handlePullMeta(accountId) {
+  const scope = scoped(accountId);
   const ledgersRes = await db.collection(LEDGER_COLLECTION).where(scope).limit(200).get();
   const ledgerRows = normalizeArray(ledgersRes.data);
-  console.log("ledgerRows:" + ledgerRows)
   const ledgers = ledgerRows.map((row) => row.ledger).filter((item) => item && item.id);
-  console.log("ledgers:" + ledgers)
   const bookIds = ledgers.map((item) => String(item.id));
-  console.log("bookIds:" + bookIds)
   return ok(
     {
       ledgers,
@@ -269,9 +432,9 @@ async function handlePullMeta(openid, catalogueCode) {
   );
 }
 
-async function handlePullBook(openid, payload, catalogueCode) {
+async function handlePullBook(accountId, payload) {
   const source = asObject(payload);
-  const scope = scoped(openid, catalogueCode);
+  const scope = scoped(accountId);
   const bookId = sanitizeBookId(source.bookId);
   const offset = Math.max(0, Number(source.offset) || 0);
   const limit = Math.min(200, Math.max(20, Number(source.limit) || 100));
@@ -306,10 +469,10 @@ async function handlePullBook(openid, payload, catalogueCode) {
   );
 }
 
-async function handlePullConfig(openid) {
+async function handlePullConfig(accountId) {
   const existing = await db
     .collection(CONFIG_COLLECTION)
-    .where({ openid })
+    .where({ accountId })
     .orderBy('updatedAt', 'desc')
     .limit(1)
     .get();
@@ -321,7 +484,6 @@ async function handlePullConfig(openid) {
     {
       apiBase: row.apiBase || '',
       enabled: !!row.enabled,
-      catalogueCode: row.catalogueCode || '',
       cloudEnvId: row.cloudEnvId || '',
     },
     '拉取配置成功'
@@ -329,40 +491,59 @@ async function handlePullConfig(openid) {
 }
 
 exports.main = async (event) => {
-  const ctx = cloud.getWXContext();
-  const openid = ctx.OPENID;
-  if (!openid) return fail('未获取到用户身份', 401);
+  const path = typeof event.path === 'string' ? event.path : '';
+  const payload = event.payload && typeof event.payload === 'object' ? event.payload : {};
+  const clientTs = Number(event.clientTs) || Date.now();
+  const authToken = typeof event.authToken === 'string' ? event.authToken : '';
 
   try {
-    const path = typeof event.path === 'string' ? event.path : '';
-    const payload = event.payload && typeof event.payload === 'object' ? event.payload : {};
-    const catalogueCode = typeof event.catalogueCode === 'string' ? event.catalogueCode : '';
-    const clientTs = Number(event.clientTs) || Date.now();
+    if (path === '/auth/register') {
+      return await handleRegister(payload);
+    }
+    if (path === '/auth/login') {
+      return await handleLogin(payload);
+    }
+
+    const accountId = verifyAuthToken(authToken);
+    if (!accountId) {
+      return fail('未登录或登录已过期', 401);
+    }
+
+    if (path === '/user/profile/update') {
+      return await handleProfileUpdate(accountId, payload);
+    }
+    if (path === '/user/profile/get') {
+      return await handleProfileGet(accountId);
+    }
+    if (path === '/wechat/bind') {
+      return await handleWechatBind(accountId);
+    }
 
     if (path === '/accountbook/sync/reset') {
-      return await handleSyncReset(openid, payload, catalogueCode, clientTs);
+      return await handleSyncReset(accountId, payload, clientTs);
     }
     if (path === '/accountbook/sync/book/reset') {
-      return await handleSyncBookReset(openid, payload, catalogueCode, clientTs);
+      return await handleSyncBookReset(accountId, payload, clientTs);
     }
     if (path === '/accountbook/sync/book/chunk') {
-      return await handleSyncBookChunk(openid, payload, catalogueCode, clientTs);
+      return await handleSyncBookChunk(accountId, payload, clientTs);
     }
     if (path === '/accountbook/sync/prune') {
-      return await handleSyncPrune(openid, payload, catalogueCode);
+      return await handleSyncPrune(accountId, payload);
     }
     if (path === '/accountbook/pull/meta') {
-      return await handlePullMeta(openid, catalogueCode);
+      return await handlePullMeta(accountId);
     }
     if (path === '/accountbook/pull/book') {
-      return await handlePullBook(openid, payload, catalogueCode);
+      return await handlePullBook(accountId, payload);
     }
     if (path === '/accountbook/config/save') {
-      return await handleSaveConfig(openid, payload, catalogueCode, clientTs);
+      return await handleSaveConfig(accountId, payload, clientTs);
     }
     if (path === '/accountbook/config/pull') {
-      return await handlePullConfig(openid);
+      return await handlePullConfig(accountId);
     }
+
     return fail('未支持的路径，路径需以 / 开头', 404);
   } catch (err) {
     const message = err && err.message ? err.message : '服务器异常';

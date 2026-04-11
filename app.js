@@ -1,5 +1,6 @@
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
+const session_1 = require("./utils/session");
 const storage_1 = require("./utils/storage");
 App({
     globalData: {},
@@ -7,15 +8,28 @@ App({
         var _a;
         if (!wx.cloud)
             return;
-        const cfg = (0, storage_1.loadSyncConfig)();
-        const env = (_a = cfg.cloudEnvId) === null || _a === void 0 ? void 0 : _a.trim();
-        if (env) {
-            wx.cloud.init({
-                env,
-                traceUser: true,
-            });
+        wx.cloud.init({ traceUser: true });
+        const s = (0, session_1.getSession)();
+        if (s) {
+            (0, storage_1.setStorageAccountId)(s.accountId);
+            const cfg = (0, storage_1.loadSyncConfig)();
+            const env = (_a = cfg.cloudEnvId) === null || _a === void 0 ? void 0 : _a.trim();
+            if (env) {
+                wx.cloud.init({ env, traceUser: true });
+            }
+        }
+        else {
+            (0, storage_1.clearStorageAccountId)();
+        }
+    },
+    onShow() {
+        if (!wx.cloud)
+            return;
+        const s = (0, session_1.getSession)();
+        if (s) {
+            (0, storage_1.setStorageAccountId)(s.accountId);
             return;
         }
-        wx.cloud.init({ traceUser: true });
+        (0, storage_1.clearStorageAccountId)();
     },
 });

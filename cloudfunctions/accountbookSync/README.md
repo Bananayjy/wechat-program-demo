@@ -1,6 +1,21 @@
 # accountbookSync 云函数说明
 
-## 支持路径
+## 环境变量
+
+- **`JWT_SECRET`**（必填）：用于签发与校验登录 JWT，请在云开发控制台为该云函数配置，勿提交到仓库。
+- 登录态有效期 **6 小时**（JWT `exp`）。
+
+## 认证与用户
+
+- `/auth/register`：自助注册，`payload`：`username`、`password`
+- `/auth/login`：登录，返回 `token`、`expiresAt`、`accountId` 等
+- `/user/profile/get`：拉取资料（需 `authToken`）
+- `/user/profile/update`：更新昵称、头像（需 `authToken`），`payload`：`nickName`、`avatarUrl`（可为云存储 fileID）
+- `/wechat/bind`：将当前微信 `OPENID` 与账号绑定（需 `authToken`）
+
+以上路径与同步路径均通过云函数 `event.authToken` 传入 JWT（注册/登录除外）。
+
+## 支持路径（同步）
 
 - `/accountbook/sync/reset`：上传前初始化（账本列表）
 - `/accountbook/sync/book/reset`：重置单账本（分类 + 清空旧流水）
@@ -13,14 +28,16 @@
 
 ## 数据库集合
 
+- `app_users`：账号、`passwordHash`、`nickName`、`avatarUrl` 等
+- `wechat_bindings`：`openid` 与 `accountId` 绑定
 - `accountbook_ledgers`
-  - 关键字段：`openid`、`catalogueCode`、`bookId`、`ledger`、`updatedAt`
+  - 关键字段：`accountId`、`bookId`、`ledger`、`updatedAt`
 - `accountbook_categories`
-  - 关键字段：`openid`、`catalogueCode`、`bookId`、`categories`、`updatedAt`
+  - 关键字段：`accountId`、`bookId`、`categories`、`updatedAt`
 - `accountbook_transactions`
-  - 关键字段：`openid`、`catalogueCode`、`bookId`、`txId`、`tx`、`occurredAt`
+  - 关键字段：`accountId`、`bookId`、`txId`、`tx`、`occurredAt`
 - `accountbook_sync_configs`
-  - 关键字段：`openid`、`catalogueCode`、`enabled`、`cloudEnvId`、`updatedAt`
+  - 关键字段：`accountId`、`enabled`、`cloudEnvId`、`updatedAt`
 
 ## 权限建议
 
