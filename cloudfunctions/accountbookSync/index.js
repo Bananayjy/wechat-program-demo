@@ -254,8 +254,11 @@ async function handlePullMeta(openid, catalogueCode) {
   const scope = scoped(openid, catalogueCode);
   const ledgersRes = await db.collection(LEDGER_COLLECTION).where(scope).limit(200).get();
   const ledgerRows = normalizeArray(ledgersRes.data);
+  console.log("ledgerRows:" + ledgerRows)
   const ledgers = ledgerRows.map((row) => row.ledger).filter((item) => item && item.id);
+  console.log("ledgers:" + ledgers)
   const bookIds = ledgers.map((item) => String(item.id));
+  console.log("bookIds:" + bookIds)
   return ok(
     {
       ledgers,

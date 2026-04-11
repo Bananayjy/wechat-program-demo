@@ -26,6 +26,7 @@ async function callCloudPath(path, payload, cfg) {
             args.config = { env: cloudEnv };
         }
         const res = (await callFunctionWithFallback(args, !!cloudEnv));
+        console.log("callCloud res:" + JSON.stringify(res));
         const raw = (res.result || {});
         const hasResultPayload = raw && Object.keys(raw).length > 0;
         const normalizedMessage = raw.message ||
@@ -33,13 +34,8 @@ async function callCloudPath(path, payload, cfg) {
             raw.errmsg ||
             raw.error ||
             '';
-        const hasStatus = typeof raw.statusCode === 'number' && Number.isFinite(raw.statusCode);
-        const statusCode = hasStatus
-            ? raw.statusCode
-            : raw.ok
-                ? 200
-                : 500;
-        const ok = !!raw.ok && statusCode >= 200 && statusCode < 300;
+        const statusCode = res.errMsg === 'cloud.callFunction:ok' ? 200 : 500;
+        const ok = statusCode >= 200 && statusCode < 300;
         return {
             ok,
             statusCode,

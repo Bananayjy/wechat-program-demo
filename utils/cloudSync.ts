@@ -46,9 +46,11 @@ export async function callCloudPath<T>(
     if (cloudEnv) {
       args.config = { env: cloudEnv };
     }
+    console.log("before save");
     const res = (await callFunctionWithFallback(args, !!cloudEnv)) as {
       result?: RawCloudResponse<T>;
     };
+    console.log("res::" + JSON.stringify(res));
     const raw = (res.result || {}) as RawCloudResponse<T>;
     const hasResultPayload = raw && Object.keys(raw).length > 0;
     const normalizedMessage =
