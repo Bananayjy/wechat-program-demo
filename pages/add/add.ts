@@ -19,7 +19,8 @@ function appendCalcKey(amountYuan: string, key: string): string {
   if (Number.isNaN(n) || n > 99999999.99) return s;
   return next;
 }
-import { addTransaction, loadCategories } from '../../utils/storage';
+import { loadCategories } from '../../utils/storage';
+import { cloudFirstAddTransaction } from '../../utils/sync';
 import type { TxType } from '../../utils/types';
 
 Page({
@@ -80,7 +81,7 @@ Page({
     this.setData({ note: e.detail.value });
   },
 
-  onSave() {
+  async onSave() {
     const fen = yuanInputToFen(this.data.amountYuan);
     if (fen === null || fen === 0) {
       wx.showToast({ title: '请输入有效金额', icon: 'none' });
@@ -92,13 +93,17 @@ Page({
     }
     const [y, m, day] = this.data.dateStr.split('-').map(Number);
     const at = new Date(y, m - 1, day, 12, 0, 0, 0).getTime();
-    addTransaction({
+    const save = await cloudFirstAddTransaction({
       amountFen: fen,
       type: this.data.txType,
       categoryId: this.data.categoryId,
       note: this.data.note.trim(),
       occurredAt: at,
     });
+    if (!save.ok) {
+      wx.showToast({ title: save.message, icon: 'none' });
+      return;
+    }
     wx.showToast({ title: '已保存', icon: 'success' });
     setTimeout(() => {
       wx.navigateBack({ delta: 1 });

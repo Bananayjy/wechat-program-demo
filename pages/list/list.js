@@ -2,6 +2,7 @@
 Object.defineProperty(exports, "__esModule", { value: true });
 const format_1 = require("../../utils/format");
 const storage_1 = require("../../utils/storage");
+const sync_1 = require("../../utils/sync");
 function monthKeyFromTs(ts) {
     const d = new Date(ts);
     const y = d.getFullYear();
@@ -38,7 +39,13 @@ Page({
         filterMonth: '',
         monthGroups: [],
     },
-    onShow() {
+    async onShow() {
+        const conflictRes = await (0, sync_1.resolveConflictIfNeeded)('流水');
+        if (!conflictRes.ok)
+            return;
+        const syncRes = await (0, sync_1.pullLatestForPageOrBlock)('流水');
+        if (!syncRes.ok)
+            return;
         this.syncLedgerPicker();
         this.buildList();
     },

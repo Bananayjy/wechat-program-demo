@@ -7,6 +7,7 @@ import {
   loadTransactionsForBook,
   setCurrentBookId,
 } from '../../utils/storage';
+import { pullLatestForPageOrBlock, resolveConflictIfNeeded } from '../../utils/sync';
 
 function startOfDay(ts: number): number {
   const d = new Date(ts);
@@ -111,7 +112,11 @@ Page({
     bookSwiperIndex: 0,
   },
 
-  onShow() {
+  async onShow() {
+    const conflictRes = await resolveConflictIfNeeded('首页');
+    if (!conflictRes.ok) return;
+    const syncRes = await pullLatestForPageOrBlock('首页');
+    if (!syncRes.ok) return;
     this.refresh();
   },
 

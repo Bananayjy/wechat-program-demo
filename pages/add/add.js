@@ -29,6 +29,7 @@ function appendCalcKey(amountYuan, key) {
     return next;
 }
 const storage_1 = require("../../utils/storage");
+const sync_1 = require("../../utils/sync");
 Page({
     data: {
         txType: 'expense',
@@ -82,7 +83,7 @@ Page({
     onNoteInput(e) {
         this.setData({ note: e.detail.value });
     },
-    onSave() {
+    async onSave() {
         const fen = (0, format_1.yuanInputToFen)(this.data.amountYuan);
         if (fen === null || fen === 0) {
             wx.showToast({ title: '请输入有效金额', icon: 'none' });
@@ -94,13 +95,17 @@ Page({
         }
         const [y, m, day] = this.data.dateStr.split('-').map(Number);
         const at = new Date(y, m - 1, day, 12, 0, 0, 0).getTime();
-        (0, storage_1.addTransaction)({
+        const save = await (0, sync_1.cloudFirstAddTransaction)({
             amountFen: fen,
             type: this.data.txType,
             categoryId: this.data.categoryId,
             note: this.data.note.trim(),
             occurredAt: at,
         });
+        if (!save.ok) {
+            wx.showToast({ title: save.message, icon: 'none' });
+            return;
+        }
         wx.showToast({ title: '已保存', icon: 'success' });
         setTimeout(() => {
             wx.navigateBack({ delta: 1 });

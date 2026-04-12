@@ -1,10 +1,6 @@
 import { fenToYuan, formatDate, yuanInputToFen } from '../../utils/format';
-import {
-  loadCategories,
-  loadTransactions,
-  removeTransaction,
-  updateTransaction,
-} from '../../utils/storage';
+import { loadCategories, loadTransactions } from '../../utils/storage';
+import { cloudFirstRemoveTransaction, cloudFirstUpdateTransaction } from '../../utils/sync';
 import type { TxType } from '../../utils/types';
 
 Page({
@@ -83,7 +79,7 @@ Page({
     this.setData({ note: e.detail.value });
   },
 
-  onSave() {
+  async onSave() {
     const fen = yuanInputToFen(this.data.amountYuan);
     if (fen === null || fen === 0) {
       wx.showToast({ title: '请输入有效金额', icon: 'none' });
@@ -95,13 +91,17 @@ Page({
     }
     const [y, m, day] = this.data.dateStr.split('-').map(Number);
     const at = new Date(y, m - 1, day, 12, 0, 0, 0).getTime();
-    updateTransaction(this.data.id, {
+    const save = await cloudFirstUpdateTransaction(this.data.id, {
       amountFen: fen,
       type: this.data.txType,
       categoryId: this.data.categoryId,
       note: this.data.note.trim(),
       occurredAt: at,
     });
+    if (!save.ok) {
+      wx.showToast({ title: save.message, icon: 'none' });
+      return;
+    }
     wx.showToast({ title: '已保存', icon: 'success' });
     setTimeout(() => wx.navigateBack({ delta: 1 }), 400);
   },
@@ -112,9 +112,16 @@ Page({
       content: '删除后不可恢复',
       success: (res) => {
         if (res.confirm) {
-          removeTransaction(this.data.id);
-          wx.showToast({ title: '已删除', icon: 'none' });
-          setTimeout(() => wx.navigateBack({ delta: 1 }), 400);
+          const doRemove = async () => {
+            const r = await cloudFirstRemoveTransaction(this.data.id);
+            if (!r.ok) {
+              wx.showToast({ title: r.message, icon: 'none' });
+              return;
+            }
+            wx.showToast({ title: '已删除', icon: 'none' });
+            setTimeout(() => wx.navigateBack({ delta: 1 }), 400);
+          };
+          void doRemove();
         }
       },
     });

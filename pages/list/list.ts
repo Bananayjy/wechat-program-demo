@@ -7,6 +7,7 @@ import {
   loadTransactions,
   setCurrentBookId,
 } from '../../utils/storage';
+import { pullLatestForPageOrBlock, resolveConflictIfNeeded } from '../../utils/sync';
 
 interface RowVM {
   id: string;
@@ -73,7 +74,11 @@ Page({
     monthGroups: [] as MonthGroupVM[],
   },
 
-  onShow() {
+  async onShow() {
+    const conflictRes = await resolveConflictIfNeeded('流水');
+    if (!conflictRes.ok) return;
+    const syncRes = await pullLatestForPageOrBlock('流水');
+    if (!syncRes.ok) return;
     this.syncLedgerPicker();
     this.buildList();
   },

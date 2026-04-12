@@ -6,6 +6,7 @@ import {
   loadTransactions,
   setCurrentBookId,
 } from '../../utils/storage';
+import { pullLatestForPageOrBlock, resolveConflictIfNeeded } from '../../utils/sync';
 
 interface BarVM {
   id: string;
@@ -33,7 +34,11 @@ Page({
     expenseBars: [] as BarVM[],
   },
 
-  onShow() {
+  async onShow() {
+    const conflictRes = await resolveConflictIfNeeded('统计');
+    if (!conflictRes.ok) return;
+    const syncRes = await pullLatestForPageOrBlock('统计');
+    if (!syncRes.ok) return;
     if (!this.data.monthStr) {
       const d = new Date();
       const ms = `${d.getFullYear()}-${`${d.getMonth() + 1}`.padStart(2, '0')}`;

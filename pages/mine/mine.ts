@@ -11,6 +11,8 @@ import {
 import {
   bindWechatRemote,
   fetchProfileRemote,
+  pullLatestForPageOrBlock,
+  resolveConflictIfNeeded,
   pullFromRemote,
   pullSyncConfigRemote,
   pushToRemote,
@@ -33,6 +35,10 @@ Page({
   },
 
   async onShow() {
+    const conflictRes = await resolveConflictIfNeeded('我的');
+    if (!conflictRes.ok) return;
+    const syncRes = await pullLatestForPageOrBlock('我的');
+    if (!syncRes.ok) return;
     const s = getSession();
     this.setData({
       isLoggedIn: !!s,
@@ -55,7 +61,7 @@ Page({
       await this.refreshProfileFromCloud();
       const cloudCfg = await pullSyncConfigRemote(c);
       if (!cloudCfg.ok || !cloudCfg.config) return;
-      saveSyncConfig(cloudCfg.config);
+      saveSyncConfig(cloudCfg.config, { silent: true });
       this.setData({
         apiBase: cloudCfg.config.apiBase,
         cloudEnvId: cloudCfg.config.cloudEnvId,
@@ -298,6 +304,16 @@ Page({
 
   async onPush() {
     if (!this.ensureLoginOrRedirect('上传前请先登录账号')) return;
+    const confirm = await new Promise<boolean>((resolve) => {
+      wx.showModal({
+        title: '上传到云端',
+        content: '将使用本地数据全量覆盖云端数据，是否继续？',
+        confirmText: '继续上传',
+        success: (res) => resolve(!!res.confirm),
+        fail: () => resolve(false),
+      });
+    });
+    if (!confirm) return;
     wx.showLoading({ title: '上传中' });
     const r = await pushToRemote();
     wx.hideLoading();
@@ -306,6 +322,16 @@ Page({
 
   async onPull() {
     if (!this.ensureLoginOrRedirect('拉取前请先登录账号')) return;
+    const confirm = await new Promise<boolean>((resolve) => {
+      wx.showModal({
+        title: '从云端拉取',
+        content: '将使用云端数据全量覆盖本地数据，是否继续？',
+        confirmText: '继续拉取',
+        success: (res) => resolve(!!res.confirm),
+        fail: () => resolve(false),
+      });
+    });
+    if (!confirm) return;
     wx.showLoading({ title: '拉取中' });
     const r = await pullFromRemote();
     wx.hideLoading();

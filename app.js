@@ -2,6 +2,7 @@
 Object.defineProperty(exports, "__esModule", { value: true });
 const session_1 = require("./utils/session");
 const storage_1 = require("./utils/storage");
+const sync_1 = require("./utils/sync");
 App({
     globalData: {},
     onLaunch() {
@@ -9,6 +10,7 @@ App({
         if (!wx.cloud)
             return;
         wx.cloud.init({ traceUser: true });
+        (0, sync_1.resetLaunchPullFlag)();
         const s = (0, session_1.getSession)();
         if (s) {
             (0, storage_1.setStorageAccountId)(s.accountId);

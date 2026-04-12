@@ -2,6 +2,7 @@
 Object.defineProperty(exports, "__esModule", { value: true });
 const format_1 = require("../../utils/format");
 const storage_1 = require("../../utils/storage");
+const sync_1 = require("../../utils/sync");
 function startOfDay(ts) {
     const d = new Date(ts);
     d.setHours(0, 0, 0, 0);
@@ -80,7 +81,13 @@ Page({
         bookSlides: [],
         bookSwiperIndex: 0,
     },
-    onShow() {
+    async onShow() {
+        const conflictRes = await (0, sync_1.resolveConflictIfNeeded)('首页');
+        if (!conflictRes.ok)
+            return;
+        const syncRes = await (0, sync_1.pullLatestForPageOrBlock)('首页');
+        if (!syncRes.ok)
+            return;
         this.refresh();
     },
     refresh() {

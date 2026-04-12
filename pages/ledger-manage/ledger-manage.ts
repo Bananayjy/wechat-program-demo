@@ -1,10 +1,12 @@
 import {
-  addLedger,
   loadLedgers,
-  removeLedger,
-  renameLedger,
-  updateLedgerCover,
 } from '../../utils/storage';
+import {
+  cloudFirstAddLedger,
+  cloudFirstRemoveLedger,
+  cloudFirstRenameLedger,
+  cloudFirstUpdateLedgerCover,
+} from '../../utils/sync';
 
 interface TileVM {
   id: string;
@@ -46,9 +48,16 @@ Page({
           wx.showToast({ title: '请输入名称', icon: 'none' });
           return;
         }
-        addLedger(name);
-        this.refresh();
-        wx.showToast({ title: '已添加', icon: 'success' });
+        const doAdd = async () => {
+          const r = await cloudFirstAddLedger(name);
+          if (!r.ok) {
+            wx.showToast({ title: r.message, icon: 'none' });
+            return;
+          }
+          this.refresh();
+          wx.showToast({ title: '已添加', icon: 'success' });
+        };
+        void doAdd();
       },
     });
   },
@@ -70,9 +79,16 @@ Page({
           wx.showToast({ title: '名称不能为空', icon: 'none' });
           return;
         }
-        renameLedger(id, name);
-        this.refresh();
-        wx.showToast({ title: '已更新', icon: 'success' });
+        const doRename = async () => {
+          const r = await cloudFirstRenameLedger(id, name);
+          if (!r.ok) {
+            wx.showToast({ title: r.message, icon: 'none' });
+            return;
+          }
+          this.refresh();
+          wx.showToast({ title: '已更新', icon: 'success' });
+        };
+        void doRename();
       },
     });
   },
@@ -87,13 +103,16 @@ Page({
       confirmColor: '#e87868',
       success: (res) => {
         if (!res.confirm) return;
-        const r = removeLedger(id);
-        if (!r.ok) {
-          wx.showToast({ title: r.message || '无法删除', icon: 'none' });
-          return;
-        }
-        this.refresh();
-        wx.showToast({ title: '已删除', icon: 'success' });
+        const doRemove = async () => {
+          const r = await cloudFirstRemoveLedger(id);
+          if (!r.ok) {
+            wx.showToast({ title: r.message || '无法删除', icon: 'none' });
+            return;
+          }
+          this.refresh();
+          wx.showToast({ title: '已删除', icon: 'success' });
+        };
+        void doRemove();
       },
     });
   },
@@ -113,8 +132,15 @@ Page({
           success: (r) => {
             const saved = r.savedFilePath;
             if (saved) {
-              updateLedgerCover(id, saved);
-              this.refresh();
+              const doUpdateCover = async () => {
+                const r = await cloudFirstUpdateLedgerCover(id, saved);
+                if (!r.ok) {
+                  wx.showToast({ title: r.message, icon: 'none' });
+                  return;
+                }
+                this.refresh();
+              };
+              void doUpdateCover();
             }
           },
           fail: () => {

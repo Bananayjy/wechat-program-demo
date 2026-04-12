@@ -2,6 +2,7 @@
 Object.defineProperty(exports, "__esModule", { value: true });
 const format_1 = require("../../utils/format");
 const storage_1 = require("../../utils/storage");
+const sync_1 = require("../../utils/sync");
 function monthRange(ym) {
     const [y, m] = ym.split('-').map(Number);
     const start = new Date(y, m - 1, 1, 0, 0, 0, 0).getTime();
@@ -19,7 +20,13 @@ Page({
         incomeBars: [],
         expenseBars: [],
     },
-    onShow() {
+    async onShow() {
+        const conflictRes = await (0, sync_1.resolveConflictIfNeeded)('统计');
+        if (!conflictRes.ok)
+            return;
+        const syncRes = await (0, sync_1.pullLatestForPageOrBlock)('统计');
+        if (!syncRes.ok)
+            return;
         if (!this.data.monthStr) {
             const d = new Date();
             const ms = `${d.getFullYear()}-${`${d.getMonth() + 1}`.padStart(2, '0')}`;

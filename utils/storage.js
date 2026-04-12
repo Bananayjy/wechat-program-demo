@@ -4,6 +4,7 @@ exports.GUEST_ACCOUNT_ID = void 0;
 exports.setStorageAccountId = setStorageAccountId;
 exports.getStorageAccountId = getStorageAccountId;
 exports.clearStorageAccountId = clearStorageAccountId;
+exports.runWithAutoSyncSuppressed = runWithAutoSyncSuppressed;
 exports.getDefaultCategories = getDefaultCategories;
 exports.loadLedgers = loadLedgers;
 exports.getCurrentBookId = getCurrentBookId;
@@ -68,6 +69,26 @@ function uid() {
     return `${Date.now()}_${Math.random().toString(36).slice(2, 11)}`;
 }
 let migrationDoneForAccount = '';
+let autoSyncSuppressCount = 0;
+function runWithAutoSyncSuppressed(fn) {
+    autoSyncSuppressCount += 1;
+    try {
+        return fn();
+    }
+    finally {
+        autoSyncSuppressCount = Math.max(0, autoSyncSuppressCount - 1);
+    }
+}
+function triggerAutoSync(reason) {
+    if (autoSyncSuppressCount > 0)
+        return;
+    void Promise.resolve().then(() => require('./sync')).then((m) => {
+        m.syncAfterLocalMutation(reason);
+    })
+        .catch(() => {
+        /* empty */
+    });
+}
 function initAccountIfEmpty(accountId) {
     if (migrationDoneForAccount === accountId)
         return;
@@ -165,6 +186,7 @@ function setCurrentBookId(id) {
     if (!ledgers.some((l) => l.id === id))
         return;
     wx.setStorageSync(keyCurrentBook(aid), id);
+    triggerAutoSync('setCurrentBookId');
 }
 function addLedger(name) {
     const aid = requireAccountId();
@@ -179,6 +201,7 @@ function addLedger(name) {
     saveLedgersInternal(list);
     wx.setStorageSync(catKey(aid, item.id), getDefaultCategories());
     wx.setStorageSync(txKey(aid, item.id), []);
+    triggerAutoSync('addLedger');
     return item;
 }
 function renameLedger(id, name) {
@@ -192,6 +215,7 @@ function renameLedger(id, name) {
         return false;
     list[i] = { ...list[i], name: trimmed };
     saveLedgersInternal(list);
+    triggerAutoSync('renameLedger');
     return true;
 }
 function unlinkLedgerCoverIfLocal(path) {
@@ -217,6 +241,7 @@ function updateLedgerCover(id, localPath) {
     }
     list[i] = { ...list[i], coverImagePath: localPath };
     saveLedgersInternal(list);
+    triggerAutoSync('updateLedgerCover');
     return true;
 }
 function removeLedger(id) {
@@ -256,6 +281,7 @@ function removeLedger(id) {
         if (first)
             wx.setStorageSync(keyCurrentBook(aid), first);
     }
+    triggerAutoSync('removeLedger');
     return { ok: true };
 }
 function loadCategoriesForBook(bookId) {
@@ -323,6 +349,7 @@ function addCategory(c) {
     const list = loadCategories();
     list.push(item);
     saveCategories(list);
+    triggerAutoSync('addCategory');
     return item;
 }
 function updateCategory(id, patch) {
@@ -332,6 +359,7 @@ function updateCategory(id, patch) {
         return false;
     list[i] = { ...list[i], ...patch };
     saveCategories(list);
+    triggerAutoSync('updateCategory');
     return true;
 }
 function removeCategory(id) {
@@ -341,6 +369,7 @@ function removeCategory(id) {
     }
     const list = loadCategories().filter((c) => c.id !== id);
     saveCategories(list);
+    triggerAutoSync('removeCategory');
     return true;
 }
 function addTransaction(input) {
@@ -350,6 +379,7 @@ function addTransaction(input) {
     list.push(item);
     list.sort((a, b) => b.occurredAt - a.occurredAt);
     saveTransactionsForBook(bookId, list);
+    triggerAutoSync('addTransaction');
     return item;
 }
 function updateTransaction(id, patch) {
@@ -361,12 +391,14 @@ function updateTransaction(id, patch) {
     list[i] = { ...list[i], ...patch };
     list.sort((a, b) => b.occurredAt - a.occurredAt);
     saveTransactionsForBook(bookId, list);
+    triggerAutoSync('updateTransaction');
     return true;
 }
 function removeTransaction(id) {
     const bookId = getCurrentBookId();
     const list = loadTransactionsForBook(bookId).filter((t) => t.id !== id);
     saveTransactionsForBook(bookId, list);
+    triggerAutoSync('removeTransaction');
     return true;
 }
 function normalizeSyncConfig(raw) {
@@ -401,11 +433,14 @@ function loadSyncConfig() {
         return { apiBase: '', enabled: false, cloudEnvId: '' };
     }
 }
-function saveSyncConfig(c) {
+function saveSyncConfig(c, options) {
     const aid = requireAccountId();
     if (!aid)
         return;
     wx.setStorageSync(keySyncConfig(aid), normalizeSyncConfig(c));
+    if (!(options === null || options === void 0 ? void 0 : options.silent)) {
+        triggerAutoSync('saveSyncConfig');
+    }
 }
 function buildFullSyncPayload() {
     ensureStorageReady();

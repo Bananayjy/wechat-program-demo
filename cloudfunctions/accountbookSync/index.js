@@ -94,6 +94,16 @@ async function removeByQueryInBatches(collection, where, batchSize = 100) {
   }
 }
 
+async function getLatestConfigDoc(accountId) {
+  const existing = await db
+    .collection(CONFIG_COLLECTION)
+    .where({ accountId })
+    .orderBy('updatedAt', 'desc')
+    .limit(1)
+    .get();
+  return existing.data.length > 0 ? existing.data[0] : null;
+}
+
 function scoped(accountId) {
   return { accountId };
 }
@@ -289,21 +299,18 @@ async function handleWechatBind(accountId) {
 
 async function handleSaveConfig(accountId, payload, clientTs) {
   const cfg = sanitizeConfig(payload);
-  const existing = await db
-    .collection(CONFIG_COLLECTION)
-    .where({ accountId })
-    .limit(1)
-    .get();
+  const existingDoc = await getLatestConfigDoc(accountId);
 
   const doc = {
     ...cfg,
     accountId,
     clientTs: Number(clientTs) || Date.now(),
     lastOp: 'saveConfig',
+    syncRevision: Number(existingDoc && existingDoc.syncRevision) || 0,
     updatedAt: db.serverDate(),
   };
-  if (existing.data.length > 0) {
-    await db.collection(CONFIG_COLLECTION).doc(existing.data[0]._id).update({ data: doc });
+  if (existingDoc) {
+    await db.collection(CONFIG_COLLECTION).doc(existingDoc._id).update({ data: doc });
   } else {
     await db.collection(CONFIG_COLLECTION).add({ data: doc });
   }
@@ -315,6 +322,14 @@ async function handleSyncReset(accountId, payload, clientTs) {
   const scope = scoped(accountId);
   const ledgers = sanitizeLedgers(source.ledgers);
   const bookIds = normalizeArray(source.bookIds).map((item) => String(item)).filter(Boolean);
+  const baseRevision = Math.max(0, Number(source.baseRevision) || 0);
+  const cfgDoc = await getLatestConfigDoc(accountId);
+  const currentRevision = Number(cfgDoc && cfgDoc.syncRevision) || 0;
+  if (baseRevision !== currentRevision) {
+    return fail('数据已在其他设备更新，请先拉取最新数据再重试', 409);
+  }
+  const nextRevision = currentRevision + 1;
+  const syncToken = `${Date.now()}_${Math.random().toString(36).slice(2, 10)}`;
 
   for (const ledger of ledgers) {
     await upsertOne(
@@ -336,16 +351,24 @@ async function handleSyncReset(accountId, payload, clientTs) {
       lastOp: 'syncReset',
       latestBookIds: bookIds,
       latestClientTime: Number(source.clientTime) || Date.now(),
+      syncRevision: currentRevision,
+      syncPendingToken: syncToken,
+      syncPendingNextRevision: nextRevision,
       updatedAt: db.serverDate(),
     }
   );
 
-  return ok({ reset: true, books: bookIds.length }, '重置成功');
+  return ok({ reset: true, books: bookIds.length, syncToken, nextRevision }, '重置成功');
 }
 
 async function handleSyncBookReset(accountId, payload, clientTs) {
   const source = asObject(payload);
   const scope = scoped(accountId);
+  const syncToken = typeof source.syncToken === 'string' ? source.syncToken : '';
+  const cfgDoc = await getLatestConfigDoc(accountId);
+  if (!cfgDoc || !syncToken || cfgDoc.syncPendingToken !== syncToken) {
+    return fail('同步会话失效，请重新上传', 409);
+  }
   const bookId = sanitizeBookId(source.bookId);
   const categories = sanitizeCategories(source.categories);
   const ledger = source.ledger && source.ledger.id ? sanitizeLedgers([source.ledger])[0] : null;
@@ -379,6 +402,11 @@ async function handleSyncBookReset(accountId, payload, clientTs) {
 async function handleSyncBookChunk(accountId, payload, clientTs) {
   const source = asObject(payload);
   const scope = scoped(accountId);
+  const syncToken = typeof source.syncToken === 'string' ? source.syncToken : '';
+  const cfgDoc = await getLatestConfigDoc(accountId);
+  if (!cfgDoc || !syncToken || cfgDoc.syncPendingToken !== syncToken) {
+    return fail('同步会话失效，请重新上传', 409);
+  }
   const bookId = sanitizeBookId(source.bookId);
   const transactions = sanitizeTransactions(source.transactions);
 
@@ -401,23 +429,48 @@ async function handleSyncBookChunk(accountId, payload, clientTs) {
 async function handleSyncPrune(accountId, payload) {
   const source = asObject(payload);
   const scope = scoped(accountId);
+  const syncToken = typeof source.syncToken === 'string' ? source.syncToken : '';
+  const cfgDoc = await getLatestConfigDoc(accountId);
+  if (!cfgDoc || !syncToken || cfgDoc.syncPendingToken !== syncToken) {
+    return fail('同步会话失效，请重新上传', 409);
+  }
+  const nextRevision = Number(cfgDoc.syncPendingNextRevision) || Number(cfgDoc.syncRevision) || 0;
   const bookIds = normalizeArray(source.bookIds).map((item) => String(item)).filter(Boolean);
   if (bookIds.length === 0) {
     await removeByQueryInBatches(LEDGER_COLLECTION, scope, 100);
     await removeByQueryInBatches(CATEGORY_COLLECTION, scope, 100);
     await removeByQueryInBatches(TRANSACTION_COLLECTION, scope, 100);
-    return ok({ removedAll: true }, '清理成功');
+    await db.collection(CONFIG_COLLECTION).doc(cfgDoc._id).update({
+      data: {
+        syncRevision: nextRevision,
+        syncPendingToken: '',
+        syncPendingNextRevision: null,
+        syncUpdatedAt: db.serverDate(),
+        updatedAt: db.serverDate(),
+      },
+    });
+    return ok({ removedAll: true, syncRevision: nextRevision }, '清理成功');
   }
 
   const notInQuery = { ...scope, bookId: _.nin(bookIds) };
   await removeByQueryInBatches(LEDGER_COLLECTION, notInQuery, 100);
   await removeByQueryInBatches(CATEGORY_COLLECTION, notInQuery, 100);
   await removeByQueryInBatches(TRANSACTION_COLLECTION, notInQuery, 100);
-  return ok({ pruned: true, books: bookIds.length }, '清理成功');
+  await db.collection(CONFIG_COLLECTION).doc(cfgDoc._id).update({
+    data: {
+      syncRevision: nextRevision,
+      syncPendingToken: '',
+      syncPendingNextRevision: null,
+      syncUpdatedAt: db.serverDate(),
+      updatedAt: db.serverDate(),
+    },
+  });
+  return ok({ pruned: true, books: bookIds.length, syncRevision: nextRevision }, '清理成功');
 }
 
 async function handlePullMeta(accountId) {
   const scope = scoped(accountId);
+  const cfgDoc = await getLatestConfigDoc(accountId);
   const ledgersRes = await db.collection(LEDGER_COLLECTION).where(scope).limit(200).get();
   const ledgerRows = normalizeArray(ledgersRes.data);
   const ledgers = ledgerRows.map((row) => row.ledger).filter((item) => item && item.id);
@@ -427,6 +480,7 @@ async function handlePullMeta(accountId) {
       ledgers,
       bookIds,
       clientTime: Date.now(),
+      syncRevision: Number(cfgDoc && cfgDoc.syncRevision) || 0,
     },
     '拉取元数据成功'
   );

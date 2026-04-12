@@ -43,6 +43,27 @@ function uid(): string {
 }
 
 let migrationDoneForAccount = '';
+let autoSyncSuppressCount = 0;
+
+export function runWithAutoSyncSuppressed<T>(fn: () => T): T {
+  autoSyncSuppressCount += 1;
+  try {
+    return fn();
+  } finally {
+    autoSyncSuppressCount = Math.max(0, autoSyncSuppressCount - 1);
+  }
+}
+
+function triggerAutoSync(reason: string): void {
+  if (autoSyncSuppressCount > 0) return;
+  void import('./sync')
+    .then((m) => {
+      m.syncAfterLocalMutation(reason);
+    })
+    .catch(() => {
+      /* empty */
+    });
+}
 
 function initAccountIfEmpty(accountId: string): void {
   if (migrationDoneForAccount === accountId) return;
@@ -138,6 +159,7 @@ export function setCurrentBookId(id: string): void {
   const ledgers = loadLedgers();
   if (!ledgers.some((l) => l.id === id)) return;
   wx.setStorageSync(keyCurrentBook(aid), id);
+  triggerAutoSync('setCurrentBookId');
 }
 
 export function addLedger(name: string): Ledger {
@@ -153,6 +175,7 @@ export function addLedger(name: string): Ledger {
   saveLedgersInternal(list);
   wx.setStorageSync(catKey(aid, item.id), getDefaultCategories());
   wx.setStorageSync(txKey(aid, item.id), [] as Transaction[]);
+  triggerAutoSync('addLedger');
   return item;
 }
 
@@ -165,6 +188,7 @@ export function renameLedger(id: string, name: string): boolean {
   if (i < 0) return false;
   list[i] = { ...list[i], name: trimmed };
   saveLedgersInternal(list);
+  triggerAutoSync('renameLedger');
   return true;
 }
 
@@ -189,6 +213,7 @@ export function updateLedgerCover(id: string, localPath: string | undefined): bo
   }
   list[i] = { ...list[i], coverImagePath: localPath };
   saveLedgersInternal(list);
+  triggerAutoSync('updateLedgerCover');
   return true;
 }
 
@@ -224,6 +249,7 @@ export function removeLedger(id: string): { ok: boolean; message?: string } {
     const first = next[0]?.id;
     if (first) wx.setStorageSync(keyCurrentBook(aid), first);
   }
+  triggerAutoSync('removeLedger');
   return { ok: true };
 }
 
@@ -291,6 +317,7 @@ export function addCategory(c: Omit<Category, 'id'>): Category {
   const list = loadCategories();
   list.push(item);
   saveCategories(list);
+  triggerAutoSync('addCategory');
   return item;
 }
 
@@ -300,6 +327,7 @@ export function updateCategory(id: string, patch: Partial<Omit<Category, 'id'>>)
   if (i < 0) return false;
   list[i] = { ...list[i], ...patch };
   saveCategories(list);
+  triggerAutoSync('updateCategory');
   return true;
 }
 
@@ -310,6 +338,7 @@ export function removeCategory(id: string): boolean {
   }
   const list = loadCategories().filter((c) => c.id !== id);
   saveCategories(list);
+  triggerAutoSync('removeCategory');
   return true;
 }
 
@@ -320,6 +349,7 @@ export function addTransaction(input: Omit<Transaction, 'id'>): Transaction {
   list.push(item);
   list.sort((a, b) => b.occurredAt - a.occurredAt);
   saveTransactionsForBook(bookId, list);
+  triggerAutoSync('addTransaction');
   return item;
 }
 
@@ -334,6 +364,7 @@ export function updateTransaction(
   list[i] = { ...list[i], ...patch };
   list.sort((a, b) => b.occurredAt - a.occurredAt);
   saveTransactionsForBook(bookId, list);
+  triggerAutoSync('updateTransaction');
   return true;
 }
 
@@ -341,6 +372,7 @@ export function removeTransaction(id: string): boolean {
   const bookId = getCurrentBookId();
   const list = loadTransactionsForBook(bookId).filter((t) => t.id !== id);
   saveTransactionsForBook(bookId, list);
+  triggerAutoSync('removeTransaction');
   return true;
 }
 
@@ -385,10 +417,17 @@ export function loadSyncConfig(): SyncConfig {
   }
 }
 
-export function saveSyncConfig(c: SyncConfig): void {
+export interface SaveSyncConfigOptions {
+  silent?: boolean;
+}
+
+export function saveSyncConfig(c: SyncConfig, options?: SaveSyncConfigOptions): void {
   const aid = requireAccountId();
   if (!aid) return;
   wx.setStorageSync(keySyncConfig(aid), normalizeSyncConfig(c));
+  if (!options?.silent) {
+    triggerAutoSync('saveSyncConfig');
+  }
 }
 
 /** 多账本同步载荷：账本列表 + 各账本分类与流水 */

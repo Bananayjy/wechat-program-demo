@@ -2,6 +2,7 @@
 Object.defineProperty(exports, "__esModule", { value: true });
 const format_1 = require("../../utils/format");
 const storage_1 = require("../../utils/storage");
+const sync_1 = require("../../utils/sync");
 Page({
     data: {
         loaded: false,
@@ -73,7 +74,7 @@ Page({
     onNoteInput(e) {
         this.setData({ note: e.detail.value });
     },
-    onSave() {
+    async onSave() {
         const fen = (0, format_1.yuanInputToFen)(this.data.amountYuan);
         if (fen === null || fen === 0) {
             wx.showToast({ title: '请输入有效金额', icon: 'none' });
@@ -85,13 +86,17 @@ Page({
         }
         const [y, m, day] = this.data.dateStr.split('-').map(Number);
         const at = new Date(y, m - 1, day, 12, 0, 0, 0).getTime();
-        (0, storage_1.updateTransaction)(this.data.id, {
+        const save = await (0, sync_1.cloudFirstUpdateTransaction)(this.data.id, {
             amountFen: fen,
             type: this.data.txType,
             categoryId: this.data.categoryId,
             note: this.data.note.trim(),
             occurredAt: at,
         });
+        if (!save.ok) {
+            wx.showToast({ title: save.message, icon: 'none' });
+            return;
+        }
         wx.showToast({ title: '已保存', icon: 'success' });
         setTimeout(() => wx.navigateBack({ delta: 1 }), 400);
     },
@@ -101,9 +106,16 @@ Page({
             content: '删除后不可恢复',
             success: (res) => {
                 if (res.confirm) {
-                    (0, storage_1.removeTransaction)(this.data.id);
-                    wx.showToast({ title: '已删除', icon: 'none' });
-                    setTimeout(() => wx.navigateBack({ delta: 1 }), 400);
+                    const doRemove = async () => {
+                        const r = await (0, sync_1.cloudFirstRemoveTransaction)(this.data.id);
+                        if (!r.ok) {
+                            wx.showToast({ title: r.message, icon: 'none' });
+                            return;
+                        }
+                        wx.showToast({ title: '已删除', icon: 'none' });
+                        setTimeout(() => wx.navigateBack({ delta: 1 }), 400);
+                    };
+                    void doRemove();
                 }
             },
         });

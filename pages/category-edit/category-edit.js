@@ -1,6 +1,7 @@
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
 const storage_1 = require("../../utils/storage");
+const sync_1 = require("../../utils/sync");
 Page({
     data: {
         expenseList: [],
@@ -26,13 +27,17 @@ Page({
     onNewNameInput(e) {
         this.setData({ newName: e.detail.value });
     },
-    onAdd() {
+    async onAdd() {
         const name = this.data.newName.trim();
         if (!name) {
             wx.showToast({ title: '请输入名称', icon: 'none' });
             return;
         }
-        (0, storage_1.addCategory)({ name, type: this.data.newType });
+        const r = await (0, sync_1.cloudFirstAddCategory)({ name, type: this.data.newType });
+        if (!r.ok) {
+            wx.showToast({ title: r.message, icon: 'none' });
+            return;
+        }
         this.setData({ newName: '' });
         this.refresh();
         wx.showToast({ title: '已添加', icon: 'success' });
@@ -58,9 +63,16 @@ Page({
                     wx.showToast({ title: '名称不能为空', icon: 'none' });
                     return;
                 }
-                (0, storage_1.updateCategory)(id, { name: next });
-                this.refresh();
-                wx.showToast({ title: '已更新', icon: 'none' });
+                const doUpdate = async () => {
+                    const r = await (0, sync_1.cloudFirstUpdateCategory)(id, { name: next });
+                    if (!r.ok) {
+                        wx.showToast({ title: r.message, icon: 'none' });
+                        return;
+                    }
+                    this.refresh();
+                    wx.showToast({ title: '已更新', icon: 'none' });
+                };
+                void doUpdate();
             },
         });
     },
@@ -78,10 +90,16 @@ Page({
             content: '确定删除？',
             success: (r) => {
                 if (r.confirm) {
-                    if ((0, storage_1.removeCategory)(id)) {
+                    const doRemove = async () => {
+                        const r = await (0, sync_1.cloudFirstRemoveCategory)(id);
+                        if (!r.ok) {
+                            wx.showToast({ title: r.message, icon: 'none' });
+                            return;
+                        }
                         this.refresh();
                         wx.showToast({ title: '已删除', icon: 'none' });
-                    }
+                    };
+                    void doRemove();
                 }
             },
         });

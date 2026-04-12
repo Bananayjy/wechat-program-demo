@@ -17,6 +17,12 @@ Page({
         isLoggedIn: false,
     },
     async onShow() {
+        const conflictRes = await (0, sync_1.resolveConflictIfNeeded)('我的');
+        if (!conflictRes.ok)
+            return;
+        const syncRes = await (0, sync_1.pullLatestForPageOrBlock)('我的');
+        if (!syncRes.ok)
+            return;
         const s = (0, session_1.getSession)();
         this.setData({
             isLoggedIn: !!s,
@@ -38,7 +44,7 @@ Page({
             const cloudCfg = await (0, sync_1.pullSyncConfigRemote)(c);
             if (!cloudCfg.ok || !cloudCfg.config)
                 return;
-            (0, storage_1.saveSyncConfig)(cloudCfg.config);
+            (0, storage_1.saveSyncConfig)(cloudCfg.config, { silent: true });
             this.setData({
                 apiBase: cloudCfg.config.apiBase,
                 cloudEnvId: cloudCfg.config.cloudEnvId,
@@ -277,6 +283,17 @@ Page({
     async onPush() {
         if (!this.ensureLoginOrRedirect('上传前请先登录账号'))
             return;
+        const confirm = await new Promise((resolve) => {
+            wx.showModal({
+                title: '上传到云端',
+                content: '将使用本地数据全量覆盖云端数据，是否继续？',
+                confirmText: '继续上传',
+                success: (res) => resolve(!!res.confirm),
+                fail: () => resolve(false),
+            });
+        });
+        if (!confirm)
+            return;
         wx.showLoading({ title: '上传中' });
         const r = await (0, sync_1.pushToRemote)();
         wx.hideLoading();
@@ -284,6 +301,17 @@ Page({
     },
     async onPull() {
         if (!this.ensureLoginOrRedirect('拉取前请先登录账号'))
+            return;
+        const confirm = await new Promise((resolve) => {
+            wx.showModal({
+                title: '从云端拉取',
+                content: '将使用云端数据全量覆盖本地数据，是否继续？',
+                confirmText: '继续拉取',
+                success: (res) => resolve(!!res.confirm),
+                fail: () => resolve(false),
+            });
+        });
+        if (!confirm)
             return;
         wx.showLoading({ title: '拉取中' });
         const r = await (0, sync_1.pullFromRemote)();

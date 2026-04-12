@@ -27,18 +27,23 @@ Page({
         let cfg = (0, storage_1.loadSyncConfig)();
         const cloudCfg = await (0, sync_1.pullSyncConfigRemote)(cfg);
         if (cloudCfg.ok && cloudCfg.config) {
-            (0, storage_1.saveSyncConfig)(cloudCfg.config);
+            (0, storage_1.saveSyncConfig)(cloudCfg.config, { silent: true });
             cfg = cloudCfg.config;
         }
-        const pullRes = await (0, sync_1.pullFromRemote)();
-        if (pullRes.ok)
-            return '已登录并完成云端覆盖';
-        if (pullRes.message.includes('云端暂无可用同步数据') ||
-            pullRes.message.includes('云端无配置') ||
-            pullRes.message.includes('未启用同步')) {
-            return '已登录；云端暂无数据，已保留本地数据';
+        const metaRes = await (0, sync_1.getRemoteSyncMeta)();
+        if (!metaRes.ok || !metaRes.meta) {
+            return `已登录，检查云端数据失败：${metaRes.message}`;
         }
-        return `已登录，自动拉取失败：${pullRes.message}`;
+        if (metaRes.meta.bookIds.length > 0) {
+            const pullRes = await (0, sync_1.pullFromRemote)();
+            if (pullRes.ok)
+                return '已登录并完成云端覆盖';
+            return `已登录，自动拉取失败：${pullRes.message}`;
+        }
+        const pushRes = await (0, sync_1.pushToRemote)();
+        if (pushRes.ok)
+            return '已登录；云端无数据，已上传本地数据';
+        return `已登录，云端无数据但自动上传失败：${pushRes.message}`;
     },
     onUsername(e) {
         this.setData({ username: e.detail.value });
@@ -85,7 +90,7 @@ Page({
         (0, storage_1.setStorageAccountId)(d.accountId);
         if (cloudEnvId) {
             const cfg = (0, storage_1.loadSyncConfig)();
-            (0, storage_1.saveSyncConfig)({ ...cfg, cloudEnvId });
+            (0, storage_1.saveSyncConfig)({ ...cfg, cloudEnvId }, { silent: true });
             wx.cloud.init({ env: cloudEnvId, traceUser: true });
         }
         wx.login({

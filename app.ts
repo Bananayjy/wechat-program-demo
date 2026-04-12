@@ -1,11 +1,13 @@
 import { getSession } from './utils/session';
 import { clearStorageAccountId, loadSyncConfig, setStorageAccountId } from './utils/storage';
+import { resetLaunchPullFlag } from './utils/sync';
 
 App({
   globalData: {},
   onLaunch() {
     if (!wx.cloud) return;
     wx.cloud.init({ traceUser: true });
+    resetLaunchPullFlag();
 
     const s = getSession();
     if (s) {
