@@ -4,7 +4,11 @@ import {
   addTransaction,
   applyFullSyncPayload,
   buildFullSyncPayload,
+  getCurrentBookId,
+  loadCategoriesForBook,
+  loadLedgers,
   loadSyncConfig,
+  loadTransactionsForBook,
   removeCategory,
   removeLedger,
   removeTransaction,
@@ -137,66 +141,101 @@ function setLastKnownRevision(revision: number): void {
   }
 }
 
-function getLaunchPullDone(): boolean {
+function getForegroundPullPending(): boolean {
   try {
-    return !!wx.getStorageSync(getScopedSyncKey('launchPullDone'));
+    return !!wx.getStorageSync(getScopedSyncKey('foregroundPullPending'));
   } catch {
     return false;
   }
 }
 
-function setLaunchPullDone(done: boolean): void {
+function setForegroundPullPending(pending: boolean): void {
   try {
-    wx.setStorageSync(getScopedSyncKey('launchPullDone'), done);
+    wx.setStorageSync(getScopedSyncKey('foregroundPullPending'), pending);
   } catch {
     /* empty */
   }
 }
 
-export function resetLaunchPullFlag(): void {
-  setLaunchPullDone(false);
+export function markNeedForegroundSync(): void {
+  setForegroundPullPending(true);
 }
 
-export function shouldPullOnFirstEnterAfterLaunch(): boolean {
+function consumeForegroundSyncNeed(): boolean {
+  const pending = getForegroundPullPending();
+  if (pending) setForegroundPullPending(false);
+  return pending;
+}
+
+export function shouldPullOnForegroundEnter(): boolean {
   if (!shouldAutoPullOnPageEnter()) return false;
-  return !getLaunchPullDone();
-}
-
-function markLaunchPullDone(): void {
-  setLaunchPullDone(true);
+  return consumeForegroundSyncNeed();
 }
 
 export function markPullSuccessNow(revision?: number): void {
-  markLaunchPullDone();
   if (typeof revision === 'number' && Number.isFinite(revision) && revision >= 0) {
     setLastKnownRevision(revision);
   }
   clearConflictPending();
 }
 
-async function commitWithCloudFirst<T>(mutateLocal: () => T): Promise<{
-  ok: boolean;
-  message: string;
-  result?: T;
-}> {
+async function commitWithCloudMutation<T>(
+  mutateLocal: () => T,
+  syncRemote: (result: T) => Promise<{ ok: boolean; message: string }>
+): Promise<{ ok: boolean; message: string; result?: T }> {
   if (!getSession()) {
     return { ok: true, message: '游客模式本地保存成功', result: mutateLocal() };
   }
   const snapshot = buildFullSyncPayload();
   let result: T | undefined;
-  runWithAutoSyncSuppressed(() => {
-    result = mutateLocal();
-  });
-  const pushRes = await pushToRemote();
-  if (pushRes.ok) {
-    return { ok: true, message: pushRes.message, result };
-  }
-  if (!pushRes.message.includes('当前有用户正在操作')) {
+  try {
     runWithAutoSyncSuppressed(() => {
-      applyFullSyncPayload(snapshot);
+      result = mutateLocal();
     });
+  } catch (err) {
+    return {
+      ok: false,
+      message: err instanceof Error ? err.message : '本地保存失败',
+    };
   }
-  return { ok: false, message: pushRes.message };
+  if (result === undefined) {
+    return { ok: false, message: '本地保存失败' };
+  }
+  const remoteRes = await syncRemote(result);
+  if (remoteRes.ok) {
+    return { ok: true, message: remoteRes.message, result };
+  }
+  runWithAutoSyncSuppressed(() => {
+    applyFullSyncPayload(snapshot);
+  });
+  return { ok: false, message: `${remoteRes.message}；本地已回滚` };
+}
+
+async function pushDelta(path: string, payload: Record<string, unknown>): Promise<{
+  ok: boolean;
+  message: string;
+}> {
+  const cfg = loadSyncConfig();
+  const res = await callCloudPath(path, payload, cfg);
+  if (!res.ok) return { ok: false, message: res.message };
+  if (res.data && typeof (res.data as Record<string, unknown>).syncRevision === 'number') {
+    markPullSuccessNow(Number((res.data as Record<string, unknown>).syncRevision));
+  } else {
+    markPullSuccessNow();
+  }
+  return { ok: true, message: '已同步到云端' };
+}
+
+function getTxById(bookId: string, id: string): Transaction | undefined {
+  return loadTransactionsForBook(bookId).find((item) => item.id === id);
+}
+
+function getCategoryById(bookId: string, id: string): Category | undefined {
+  return loadCategoriesForBook(bookId).find((item) => item.id === id);
+}
+
+function getLedgerById(id: string): Ledger | undefined {
+  return loadLedgers().find((item) => item.id === id);
 }
 
 async function runAutoSyncLoop(): Promise<void> {
@@ -313,8 +352,8 @@ export async function pullLatestForPageOrBlock(
   if (!shouldAutoPullOnPageEnter()) {
     return { ok: true, message: '未启用自动拉取，使用本地缓存' };
   }
-  if (!shouldPullOnFirstEnterAfterLaunch()) {
-    return { ok: true, message: '本次启动已完成首次同步，使用本地缓存' };
+  if (!shouldPullOnForegroundEnter()) {
+    return { ok: true, message: '当前非热启动触发，使用本地缓存' };
   }
   const cfg = loadSyncConfig();
   const cloudCfg = await pullSyncConfigRemote(cfg);
@@ -322,7 +361,7 @@ export async function pullLatestForPageOrBlock(
     saveSyncConfig(cloudCfg.config, { silent: true });
   }
   while (true) {
-    wx.showLoading({ title: '同步中' });
+    wx.showLoading({ title: '数据同步中...' });
     const res = await pullFromRemote();
     wx.hideLoading();
     if (res.ok) return res;
@@ -508,7 +547,11 @@ export function pullSyncConfigRemote(
 export function cloudFirstAddTransaction(
   input: Omit<Transaction, 'id'>
 ): Promise<{ ok: boolean; message: string; item?: Transaction }> {
-  return commitWithCloudFirst(() => addTransaction(input)).then((res) => ({
+  const bookId = getCurrentBookId();
+  return commitWithCloudMutation(
+    () => addTransaction(input),
+    async (item) => pushDelta('/accountbook/tx/add', { bookId, tx: item })
+  ).then((res) => ({
     ok: res.ok,
     message: res.message,
     item: res.result,
@@ -519,7 +562,16 @@ export function cloudFirstUpdateTransaction(
   id: string,
   patch: Partial<Omit<Transaction, 'id'>>
 ): Promise<{ ok: boolean; message: string }> {
-  return commitWithCloudFirst(() => updateTransaction(id, patch)).then((res) => ({
+  const bookId = getCurrentBookId();
+  return commitWithCloudMutation(
+    () => updateTransaction(id, patch),
+    async (updated) => {
+      if (!updated) return { ok: false, message: '记录不存在' };
+      const tx = getTxById(bookId, id);
+      if (!tx) return { ok: false, message: '记录不存在' };
+      return pushDelta('/accountbook/tx/update', { bookId, tx });
+    }
+  ).then((res) => ({
     ok: res.ok && !!res.result,
     message: res.ok && !res.result ? '记录不存在' : res.message,
   }));
@@ -528,7 +580,14 @@ export function cloudFirstUpdateTransaction(
 export function cloudFirstRemoveTransaction(
   id: string
 ): Promise<{ ok: boolean; message: string }> {
-  return commitWithCloudFirst(() => removeTransaction(id)).then((res) => ({
+  const bookId = getCurrentBookId();
+  return commitWithCloudMutation(
+    () => removeTransaction(id),
+    async (removed) => {
+      if (!removed) return { ok: false, message: '记录不存在' };
+      return pushDelta('/accountbook/tx/remove', { bookId, txId: id });
+    }
+  ).then((res) => ({
     ok: res.ok && !!res.result,
     message: res.ok && !res.result ? '记录不存在' : res.message,
   }));
@@ -537,7 +596,11 @@ export function cloudFirstRemoveTransaction(
 export function cloudFirstAddCategory(
   input: Omit<Category, 'id'>
 ): Promise<{ ok: boolean; message: string; item?: Category }> {
-  return commitWithCloudFirst(() => addCategory(input)).then((res) => ({
+  const bookId = getCurrentBookId();
+  return commitWithCloudMutation(
+    () => addCategory(input),
+    async (item) => pushDelta('/accountbook/category/add', { bookId, category: item })
+  ).then((res) => ({
     ok: res.ok,
     message: res.message,
     item: res.result,
@@ -548,7 +611,16 @@ export function cloudFirstUpdateCategory(
   id: string,
   patch: Partial<Omit<Category, 'id'>>
 ): Promise<{ ok: boolean; message: string }> {
-  return commitWithCloudFirst(() => updateCategory(id, patch)).then((res) => ({
+  const bookId = getCurrentBookId();
+  return commitWithCloudMutation(
+    () => updateCategory(id, patch),
+    async (updated) => {
+      if (!updated) return { ok: false, message: '分类不存在' };
+      const category = getCategoryById(bookId, id);
+      if (!category) return { ok: false, message: '分类不存在' };
+      return pushDelta('/accountbook/category/update', { bookId, category });
+    }
+  ).then((res) => ({
     ok: res.ok && !!res.result,
     message: res.ok && !res.result ? '分类不存在' : res.message,
   }));
@@ -557,14 +629,28 @@ export function cloudFirstUpdateCategory(
 export function cloudFirstRemoveCategory(
   id: string
 ): Promise<{ ok: boolean; message: string }> {
-  return commitWithCloudFirst(() => removeCategory(id)).then((res) => ({
+  const bookId = getCurrentBookId();
+  return commitWithCloudMutation(
+    () => removeCategory(id),
+    async (removed) => {
+      if (!removed) return { ok: false, message: '删除失败，请检查是否有关联流水' };
+      return pushDelta('/accountbook/category/remove', { bookId, categoryId: id });
+    }
+  ).then((res) => ({
     ok: res.ok && !!res.result,
     message: res.ok && !res.result ? '删除失败，请检查是否有关联流水' : res.message,
   }));
 }
 
 export function cloudFirstAddLedger(name: string): Promise<{ ok: boolean; message: string }> {
-  return commitWithCloudFirst(() => addLedger(name)).then((res) => ({
+  return commitWithCloudMutation(
+    () => addLedger(name),
+    async (ledger) =>
+      pushDelta('/accountbook/ledger/add', {
+        ledger,
+        categories: loadCategoriesForBook(ledger.id),
+      })
+  ).then((res) => ({
     ok: res.ok,
     message: res.message,
   }));
@@ -574,7 +660,13 @@ export function cloudFirstRenameLedger(
   id: string,
   name: string
 ): Promise<{ ok: boolean; message: string }> {
-  return commitWithCloudFirst(() => renameLedger(id, name)).then((res) => ({
+  return commitWithCloudMutation(
+    () => renameLedger(id, name),
+    async (updated) => {
+      if (!updated) return { ok: false, message: '账本不存在或名称无效' };
+      return pushDelta('/accountbook/ledger/rename', { bookId: id, name });
+    }
+  ).then((res) => ({
     ok: res.ok && !!res.result,
     message: res.ok && !res.result ? '账本不存在或名称无效' : res.message,
   }));
@@ -583,11 +675,11 @@ export function cloudFirstRenameLedger(
 export function cloudFirstRemoveLedger(
   id: string
 ): Promise<{ ok: boolean; message: string }> {
-  return commitWithCloudFirst(() => {
+  return commitWithCloudMutation(() => {
     const r = removeLedger(id);
     if (!r.ok) throw new Error(r.message || '删除失败');
     return true;
-  })
+  }, async () => pushDelta('/accountbook/ledger/remove', { bookId: id }))
     .then((res) => ({ ok: res.ok, message: res.message }))
     .catch((err: unknown) => ({
       ok: false,
@@ -599,7 +691,17 @@ export function cloudFirstUpdateLedgerCover(
   id: string,
   localPath: string | undefined
 ): Promise<{ ok: boolean; message: string }> {
-  return commitWithCloudFirst(() => updateLedgerCover(id, localPath)).then((res) => ({
+  return commitWithCloudMutation(
+    () => updateLedgerCover(id, localPath),
+    async (updated) => {
+      if (!updated) return { ok: false, message: '账本不存在' };
+      const ledger = getLedgerById(id);
+      return pushDelta('/accountbook/ledger/cover/update', {
+        bookId: id,
+        coverImagePath: ledger?.coverImagePath || '',
+      });
+    }
+  ).then((res) => ({
     ok: res.ok && !!res.result,
     message: res.ok && !res.result ? '账本不存在' : res.message,
   }));

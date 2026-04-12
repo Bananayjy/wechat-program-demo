@@ -317,6 +317,266 @@ async function handleSaveConfig(accountId, payload, clientTs) {
   return ok({ savedAt: Date.now() }, '配置已保存');
 }
 
+function sanitizeTxId(txId) {
+  const v = typeof txId === 'string' ? txId.trim() : '';
+  if (!v) throw new Error('txId 不能为空');
+  return v;
+}
+
+function sanitizeCategoryId(categoryId) {
+  const v = typeof categoryId === 'string' ? categoryId.trim() : '';
+  if (!v) throw new Error('categoryId 不能为空');
+  return v;
+}
+
+async function touchSyncRevision(accountId, clientTs, lastOp) {
+  const existingDoc = await getLatestConfigDoc(accountId);
+  const nextRevision = (Number(existingDoc && existingDoc.syncRevision) || 0) + 1;
+  const doc = {
+    accountId,
+    apiBase: typeof (existingDoc && existingDoc.apiBase) === 'string' ? existingDoc.apiBase : '',
+    enabled: !!(existingDoc && existingDoc.enabled),
+    cloudEnvId:
+      typeof (existingDoc && existingDoc.cloudEnvId) === 'string' ? existingDoc.cloudEnvId : '',
+    clientTs: Number(clientTs) || Date.now(),
+    lastOp,
+    syncRevision: nextRevision,
+    syncPendingToken: '',
+    syncPendingNextRevision: null,
+    syncUpdatedAt: db.serverDate(),
+    updatedAt: db.serverDate(),
+  };
+  await upsertOne(CONFIG_COLLECTION, { accountId }, doc);
+  return nextRevision;
+}
+
+async function handleTxAdd(accountId, payload, clientTs) {
+  const source = asObject(payload);
+  const scope = scoped(accountId);
+  const bookId = sanitizeBookId(source.bookId);
+  const tx = sanitizeTransactions([source.tx])[0];
+  if (!tx) return fail('流水数据无效', 400);
+
+  await upsertOne(
+    TRANSACTION_COLLECTION,
+    { ...scope, bookId, txId: tx.id },
+    {
+      tx,
+      occurredAt: tx.occurredAt,
+      updatedAt: db.serverDate(),
+      clientTs: Number(clientTs) || Date.now(),
+    }
+  );
+  const syncRevision = await touchSyncRevision(accountId, clientTs, 'txAdd');
+  return ok({ bookId, txId: tx.id, syncRevision }, '流水已保存');
+}
+
+async function handleTxUpdate(accountId, payload, clientTs) {
+  const source = asObject(payload);
+  const scope = scoped(accountId);
+  const bookId = sanitizeBookId(source.bookId);
+  const tx = sanitizeTransactions([source.tx])[0];
+  if (!tx) return fail('流水数据无效', 400);
+
+  await upsertOne(
+    TRANSACTION_COLLECTION,
+    { ...scope, bookId, txId: tx.id },
+    {
+      tx,
+      occurredAt: tx.occurredAt,
+      updatedAt: db.serverDate(),
+      clientTs: Number(clientTs) || Date.now(),
+    }
+  );
+  const syncRevision = await touchSyncRevision(accountId, clientTs, 'txUpdate');
+  return ok({ bookId, txId: tx.id, syncRevision }, '流水已更新');
+}
+
+async function handleTxRemove(accountId, payload, clientTs) {
+  const source = asObject(payload);
+  const scope = scoped(accountId);
+  const bookId = sanitizeBookId(source.bookId);
+  const txId = sanitizeTxId(source.txId);
+  const existing = await db
+    .collection(TRANSACTION_COLLECTION)
+    .where({ ...scope, bookId, txId })
+    .limit(1)
+    .get();
+  if (existing.data.length > 0) {
+    await db.collection(TRANSACTION_COLLECTION).doc(existing.data[0]._id).remove();
+  }
+  const syncRevision = await touchSyncRevision(accountId, clientTs, 'txRemove');
+  return ok({ bookId, txId, removed: existing.data.length > 0, syncRevision }, '流水已删除');
+}
+
+async function handleCategoryAdd(accountId, payload, clientTs) {
+  const source = asObject(payload);
+  const scope = scoped(accountId);
+  const bookId = sanitizeBookId(source.bookId);
+  const category = sanitizeCategories([source.category])[0];
+  if (!category) return fail('分类数据无效', 400);
+
+  const existing = await db.collection(CATEGORY_COLLECTION).where({ ...scope, bookId }).limit(1).get();
+  const categories = sanitizeCategories(
+    existing.data[0] && existing.data[0].categories ? existing.data[0].categories : []
+  );
+  const idx = categories.findIndex((item) => item.id === category.id);
+  if (idx >= 0) {
+    categories[idx] = category;
+  } else {
+    categories.push(category);
+  }
+  await upsertOne(
+    CATEGORY_COLLECTION,
+    { ...scope, bookId },
+    {
+      categories,
+      updatedAt: db.serverDate(),
+      clientTs: Number(clientTs) || Date.now(),
+    }
+  );
+  const syncRevision = await touchSyncRevision(accountId, clientTs, 'categoryAdd');
+  return ok({ bookId, categoryId: category.id, syncRevision }, '分类已保存');
+}
+
+async function handleCategoryUpdate(accountId, payload, clientTs) {
+  const source = asObject(payload);
+  const scope = scoped(accountId);
+  const bookId = sanitizeBookId(source.bookId);
+  const category = sanitizeCategories([source.category])[0];
+  if (!category) return fail('分类数据无效', 400);
+
+  const existing = await db.collection(CATEGORY_COLLECTION).where({ ...scope, bookId }).limit(1).get();
+  const categories = sanitizeCategories(
+    existing.data[0] && existing.data[0].categories ? existing.data[0].categories : []
+  );
+  const idx = categories.findIndex((item) => item.id === category.id);
+  if (idx < 0) return fail('分类不存在', 404);
+  categories[idx] = category;
+  await upsertOne(
+    CATEGORY_COLLECTION,
+    { ...scope, bookId },
+    {
+      categories,
+      updatedAt: db.serverDate(),
+      clientTs: Number(clientTs) || Date.now(),
+    }
+  );
+  const syncRevision = await touchSyncRevision(accountId, clientTs, 'categoryUpdate');
+  return ok({ bookId, categoryId: category.id, syncRevision }, '分类已更新');
+}
+
+async function handleCategoryRemove(accountId, payload, clientTs) {
+  const source = asObject(payload);
+  const scope = scoped(accountId);
+  const bookId = sanitizeBookId(source.bookId);
+  const categoryId = sanitizeCategoryId(source.categoryId);
+
+  const existing = await db.collection(CATEGORY_COLLECTION).where({ ...scope, bookId }).limit(1).get();
+  const categories = sanitizeCategories(
+    existing.data[0] && existing.data[0].categories ? existing.data[0].categories : []
+  );
+  const next = categories.filter((item) => item.id !== categoryId);
+  await upsertOne(
+    CATEGORY_COLLECTION,
+    { ...scope, bookId },
+    {
+      categories: next,
+      updatedAt: db.serverDate(),
+      clientTs: Number(clientTs) || Date.now(),
+    }
+  );
+  const syncRevision = await touchSyncRevision(accountId, clientTs, 'categoryRemove');
+  return ok({ bookId, categoryId, removed: next.length !== categories.length, syncRevision }, '分类已删除');
+}
+
+async function handleLedgerAdd(accountId, payload, clientTs) {
+  const source = asObject(payload);
+  const scope = scoped(accountId);
+  const ledger = sanitizeLedgers([source.ledger])[0];
+  if (!ledger) return fail('账本数据无效', 400);
+  const categories = sanitizeCategories(source.categories);
+  const bookId = ledger.id;
+
+  await upsertOne(
+    LEDGER_COLLECTION,
+    { ...scope, bookId },
+    {
+      ledger,
+      updatedAt: db.serverDate(),
+      clientTs: Number(clientTs) || Date.now(),
+    }
+  );
+  await upsertOne(
+    CATEGORY_COLLECTION,
+    { ...scope, bookId },
+    {
+      categories,
+      updatedAt: db.serverDate(),
+      clientTs: Number(clientTs) || Date.now(),
+    }
+  );
+  const syncRevision = await touchSyncRevision(accountId, clientTs, 'ledgerAdd');
+  return ok({ bookId, syncRevision }, '账本已保存');
+}
+
+async function handleLedgerRename(accountId, payload, clientTs) {
+  const source = asObject(payload);
+  const scope = scoped(accountId);
+  const bookId = sanitizeBookId(source.bookId);
+  const name = typeof source.name === 'string' ? source.name.trim() : '';
+  if (!name) return fail('账本名称不能为空', 400);
+  const existing = await db.collection(LEDGER_COLLECTION).where({ ...scope, bookId }).limit(1).get();
+  if (existing.data.length === 0) return fail('账本不存在', 404);
+  const ledger = sanitizeLedgers([existing.data[0].ledger])[0];
+  if (!ledger) return fail('账本数据无效', 400);
+  ledger.name = name;
+  await db.collection(LEDGER_COLLECTION).doc(existing.data[0]._id).update({
+    data: {
+      ledger,
+      updatedAt: db.serverDate(),
+      clientTs: Number(clientTs) || Date.now(),
+    },
+  });
+  const syncRevision = await touchSyncRevision(accountId, clientTs, 'ledgerRename');
+  return ok({ bookId, syncRevision }, '账本已重命名');
+}
+
+async function handleLedgerCoverUpdate(accountId, payload, clientTs) {
+  const source = asObject(payload);
+  const scope = scoped(accountId);
+  const bookId = sanitizeBookId(source.bookId);
+  const coverImagePath =
+    typeof source.coverImagePath === 'string' && source.coverImagePath.trim()
+      ? source.coverImagePath.trim()
+      : undefined;
+  const existing = await db.collection(LEDGER_COLLECTION).where({ ...scope, bookId }).limit(1).get();
+  if (existing.data.length === 0) return fail('账本不存在', 404);
+  const ledger = sanitizeLedgers([existing.data[0].ledger])[0];
+  if (!ledger) return fail('账本数据无效', 400);
+  ledger.coverImagePath = coverImagePath;
+  await db.collection(LEDGER_COLLECTION).doc(existing.data[0]._id).update({
+    data: {
+      ledger,
+      updatedAt: db.serverDate(),
+      clientTs: Number(clientTs) || Date.now(),
+    },
+  });
+  const syncRevision = await touchSyncRevision(accountId, clientTs, 'ledgerCoverUpdate');
+  return ok({ bookId, syncRevision }, '账本封面已更新');
+}
+
+async function handleLedgerRemove(accountId, payload, clientTs) {
+  const source = asObject(payload);
+  const scope = scoped(accountId);
+  const bookId = sanitizeBookId(source.bookId);
+  await removeByQueryInBatches(LEDGER_COLLECTION, { ...scope, bookId }, 100);
+  await removeByQueryInBatches(CATEGORY_COLLECTION, { ...scope, bookId }, 100);
+  await removeByQueryInBatches(TRANSACTION_COLLECTION, { ...scope, bookId }, 100);
+  const syncRevision = await touchSyncRevision(accountId, clientTs, 'ledgerRemove');
+  return ok({ bookId, syncRevision }, '账本已删除');
+}
+
 async function handleSyncReset(accountId, payload, clientTs) {
   const source = asObject(payload);
   const scope = scoped(accountId);
@@ -571,6 +831,37 @@ exports.main = async (event) => {
     }
     if (path === '/wechat/bind') {
       return await handleWechatBind(accountId);
+    }
+
+    if (path === '/accountbook/tx/add') {
+      return await handleTxAdd(accountId, payload, clientTs);
+    }
+    if (path === '/accountbook/tx/update') {
+      return await handleTxUpdate(accountId, payload, clientTs);
+    }
+    if (path === '/accountbook/tx/remove') {
+      return await handleTxRemove(accountId, payload, clientTs);
+    }
+    if (path === '/accountbook/category/add') {
+      return await handleCategoryAdd(accountId, payload, clientTs);
+    }
+    if (path === '/accountbook/category/update') {
+      return await handleCategoryUpdate(accountId, payload, clientTs);
+    }
+    if (path === '/accountbook/category/remove') {
+      return await handleCategoryRemove(accountId, payload, clientTs);
+    }
+    if (path === '/accountbook/ledger/add') {
+      return await handleLedgerAdd(accountId, payload, clientTs);
+    }
+    if (path === '/accountbook/ledger/rename') {
+      return await handleLedgerRename(accountId, payload, clientTs);
+    }
+    if (path === '/accountbook/ledger/remove') {
+      return await handleLedgerRemove(accountId, payload, clientTs);
+    }
+    if (path === '/accountbook/ledger/cover/update') {
+      return await handleLedgerCoverUpdate(accountId, payload, clientTs);
     }
 
     if (path === '/accountbook/sync/reset') {

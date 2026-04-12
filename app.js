@@ -10,7 +10,6 @@ App({
         if (!wx.cloud)
             return;
         wx.cloud.init({ traceUser: true });
-        (0, sync_1.resetLaunchPullFlag)();
         const s = (0, session_1.getSession)();
         if (s) {
             (0, storage_1.setStorageAccountId)(s.accountId);
@@ -27,6 +26,7 @@ App({
     onShow() {
         if (!wx.cloud)
             return;
+        (0, sync_1.markNeedForegroundSync)();
         const s = (0, session_1.getSession)();
         if (s) {
             (0, storage_1.setStorageAccountId)(s.accountId);

@@ -3,8 +3,8 @@ Object.defineProperty(exports, "__esModule", { value: true });
 exports.fetchProfileRemote = fetchProfileRemote;
 exports.updateProfileRemote = updateProfileRemote;
 exports.bindWechatRemote = bindWechatRemote;
-exports.resetLaunchPullFlag = resetLaunchPullFlag;
-exports.shouldPullOnFirstEnterAfterLaunch = shouldPullOnFirstEnterAfterLaunch;
+exports.markNeedForegroundSync = markNeedForegroundSync;
+exports.shouldPullOnForegroundEnter = shouldPullOnForegroundEnter;
 exports.markPullSuccessNow = markPullSuccessNow;
 exports.syncAfterLocalMutation = syncAfterLocalMutation;
 exports.getRemoteSyncMeta = getRemoteSyncMeta;
@@ -109,59 +109,92 @@ function setLastKnownRevision(revision) {
         /* empty */
     }
 }
-function getLaunchPullDone() {
+function getForegroundPullPending() {
     try {
-        return !!wx.getStorageSync(getScopedSyncKey('launchPullDone'));
+        return !!wx.getStorageSync(getScopedSyncKey('foregroundPullPending'));
     }
     catch (_a) {
         return false;
     }
 }
-function setLaunchPullDone(done) {
+function setForegroundPullPending(pending) {
     try {
-        wx.setStorageSync(getScopedSyncKey('launchPullDone'), done);
+        wx.setStorageSync(getScopedSyncKey('foregroundPullPending'), pending);
     }
     catch (_a) {
         /* empty */
     }
 }
-function resetLaunchPullFlag() {
-    setLaunchPullDone(false);
+function markNeedForegroundSync() {
+    setForegroundPullPending(true);
 }
-function shouldPullOnFirstEnterAfterLaunch() {
+function consumeForegroundSyncNeed() {
+    const pending = getForegroundPullPending();
+    if (pending)
+        setForegroundPullPending(false);
+    return pending;
+}
+function shouldPullOnForegroundEnter() {
     if (!shouldAutoPullOnPageEnter())
         return false;
-    return !getLaunchPullDone();
-}
-function markLaunchPullDone() {
-    setLaunchPullDone(true);
+    return consumeForegroundSyncNeed();
 }
 function markPullSuccessNow(revision) {
-    markLaunchPullDone();
     if (typeof revision === 'number' && Number.isFinite(revision) && revision >= 0) {
         setLastKnownRevision(revision);
     }
     clearConflictPending();
 }
-async function commitWithCloudFirst(mutateLocal) {
+async function commitWithCloudMutation(mutateLocal, syncRemote) {
     if (!(0, session_1.getSession)()) {
         return { ok: true, message: '游客模式本地保存成功', result: mutateLocal() };
     }
     const snapshot = (0, storage_1.buildFullSyncPayload)();
     let result;
-    (0, storage_1.runWithAutoSyncSuppressed)(() => {
-        result = mutateLocal();
-    });
-    const pushRes = await pushToRemote();
-    if (pushRes.ok) {
-        return { ok: true, message: pushRes.message, result };
-    }
-    if (!pushRes.message.includes('当前有用户正在操作')) {
+    try {
         (0, storage_1.runWithAutoSyncSuppressed)(() => {
-            (0, storage_1.applyFullSyncPayload)(snapshot);
+            result = mutateLocal();
         });
     }
-    return { ok: false, message: pushRes.message };
+    catch (err) {
+        return {
+            ok: false,
+            message: err instanceof Error ? err.message : '本地保存失败',
+        };
+    }
+    if (result === undefined) {
+        return { ok: false, message: '本地保存失败' };
+    }
+    const remoteRes = await syncRemote(result);
+    if (remoteRes.ok) {
+        return { ok: true, message: remoteRes.message, result };
+    }
+    (0, storage_1.runWithAutoSyncSuppressed)(() => {
+        (0, storage_1.applyFullSyncPayload)(snapshot);
+    });
+    return { ok: false, message: `${remoteRes.message}；本地已回滚` };
+}
+async function pushDelta(path, payload) {
+    const cfg = (0, storage_1.loadSyncConfig)();
+    const res = await (0, cloudSync_1.callCloudPath)(path, payload, cfg);
+    if (!res.ok)
+        return { ok: false, message: res.message };
+    if (res.data && typeof res.data.syncRevision === 'number') {
+        markPullSuccessNow(Number(res.data.syncRevision));
+    }
+    else {
+        markPullSuccessNow();
+    }
+    return { ok: true, message: '已同步到云端' };
+}
+function getTxById(bookId, id) {
+    return (0, storage_1.loadTransactionsForBook)(bookId).find((item) => item.id === id);
+}
+function getCategoryById(bookId, id) {
+    return (0, storage_1.loadCategoriesForBook)(bookId).find((item) => item.id === id);
+}
+function getLedgerById(id) {
+    return (0, storage_1.loadLedgers)().find((item) => item.id === id);
 }
 async function runAutoSyncLoop() {
     if (autoSyncRunning) {
@@ -273,8 +306,8 @@ async function pullLatestForPageOrBlock(pageName) {
     if (!shouldAutoPullOnPageEnter()) {
         return { ok: true, message: '未启用自动拉取，使用本地缓存' };
     }
-    if (!shouldPullOnFirstEnterAfterLaunch()) {
-        return { ok: true, message: '本次启动已完成首次同步，使用本地缓存' };
+    if (!shouldPullOnForegroundEnter()) {
+        return { ok: true, message: '当前非热启动触发，使用本地缓存' };
     }
     const cfg = (0, storage_1.loadSyncConfig)();
     const cloudCfg = await pullSyncConfigRemote(cfg);
@@ -282,7 +315,7 @@ async function pullLatestForPageOrBlock(pageName) {
         (0, storage_1.saveSyncConfig)(cloudCfg.config, { silent: true });
     }
     while (true) {
-        wx.showLoading({ title: '同步中' });
+        wx.showLoading({ title: '数据同步中...' });
         const res = await pullFromRemote();
         wx.hideLoading();
         if (res.ok)
@@ -429,62 +462,97 @@ function pullSyncConfigRemote(cfg) {
     });
 }
 function cloudFirstAddTransaction(input) {
-    return commitWithCloudFirst(() => (0, storage_1.addTransaction)(input)).then((res) => ({
+    const bookId = (0, storage_1.getCurrentBookId)();
+    return commitWithCloudMutation(() => (0, storage_1.addTransaction)(input), async (item) => pushDelta('/accountbook/tx/add', { bookId, tx: item })).then((res) => ({
         ok: res.ok,
         message: res.message,
         item: res.result,
     }));
 }
 function cloudFirstUpdateTransaction(id, patch) {
-    return commitWithCloudFirst(() => (0, storage_1.updateTransaction)(id, patch)).then((res) => ({
+    const bookId = (0, storage_1.getCurrentBookId)();
+    return commitWithCloudMutation(() => (0, storage_1.updateTransaction)(id, patch), async (updated) => {
+        if (!updated)
+            return { ok: false, message: '记录不存在' };
+        const tx = getTxById(bookId, id);
+        if (!tx)
+            return { ok: false, message: '记录不存在' };
+        return pushDelta('/accountbook/tx/update', { bookId, tx });
+    }).then((res) => ({
         ok: res.ok && !!res.result,
         message: res.ok && !res.result ? '记录不存在' : res.message,
     }));
 }
 function cloudFirstRemoveTransaction(id) {
-    return commitWithCloudFirst(() => (0, storage_1.removeTransaction)(id)).then((res) => ({
+    const bookId = (0, storage_1.getCurrentBookId)();
+    return commitWithCloudMutation(() => (0, storage_1.removeTransaction)(id), async (removed) => {
+        if (!removed)
+            return { ok: false, message: '记录不存在' };
+        return pushDelta('/accountbook/tx/remove', { bookId, txId: id });
+    }).then((res) => ({
         ok: res.ok && !!res.result,
         message: res.ok && !res.result ? '记录不存在' : res.message,
     }));
 }
 function cloudFirstAddCategory(input) {
-    return commitWithCloudFirst(() => (0, storage_1.addCategory)(input)).then((res) => ({
+    const bookId = (0, storage_1.getCurrentBookId)();
+    return commitWithCloudMutation(() => (0, storage_1.addCategory)(input), async (item) => pushDelta('/accountbook/category/add', { bookId, category: item })).then((res) => ({
         ok: res.ok,
         message: res.message,
         item: res.result,
     }));
 }
 function cloudFirstUpdateCategory(id, patch) {
-    return commitWithCloudFirst(() => (0, storage_1.updateCategory)(id, patch)).then((res) => ({
+    const bookId = (0, storage_1.getCurrentBookId)();
+    return commitWithCloudMutation(() => (0, storage_1.updateCategory)(id, patch), async (updated) => {
+        if (!updated)
+            return { ok: false, message: '分类不存在' };
+        const category = getCategoryById(bookId, id);
+        if (!category)
+            return { ok: false, message: '分类不存在' };
+        return pushDelta('/accountbook/category/update', { bookId, category });
+    }).then((res) => ({
         ok: res.ok && !!res.result,
         message: res.ok && !res.result ? '分类不存在' : res.message,
     }));
 }
 function cloudFirstRemoveCategory(id) {
-    return commitWithCloudFirst(() => (0, storage_1.removeCategory)(id)).then((res) => ({
+    const bookId = (0, storage_1.getCurrentBookId)();
+    return commitWithCloudMutation(() => (0, storage_1.removeCategory)(id), async (removed) => {
+        if (!removed)
+            return { ok: false, message: '删除失败，请检查是否有关联流水' };
+        return pushDelta('/accountbook/category/remove', { bookId, categoryId: id });
+    }).then((res) => ({
         ok: res.ok && !!res.result,
         message: res.ok && !res.result ? '删除失败，请检查是否有关联流水' : res.message,
     }));
 }
 function cloudFirstAddLedger(name) {
-    return commitWithCloudFirst(() => (0, storage_1.addLedger)(name)).then((res) => ({
+    return commitWithCloudMutation(() => (0, storage_1.addLedger)(name), async (ledger) => pushDelta('/accountbook/ledger/add', {
+        ledger,
+        categories: (0, storage_1.loadCategoriesForBook)(ledger.id),
+    })).then((res) => ({
         ok: res.ok,
         message: res.message,
     }));
 }
 function cloudFirstRenameLedger(id, name) {
-    return commitWithCloudFirst(() => (0, storage_1.renameLedger)(id, name)).then((res) => ({
+    return commitWithCloudMutation(() => (0, storage_1.renameLedger)(id, name), async (updated) => {
+        if (!updated)
+            return { ok: false, message: '账本不存在或名称无效' };
+        return pushDelta('/accountbook/ledger/rename', { bookId: id, name });
+    }).then((res) => ({
         ok: res.ok && !!res.result,
         message: res.ok && !res.result ? '账本不存在或名称无效' : res.message,
     }));
 }
 function cloudFirstRemoveLedger(id) {
-    return commitWithCloudFirst(() => {
+    return commitWithCloudMutation(() => {
         const r = (0, storage_1.removeLedger)(id);
         if (!r.ok)
             throw new Error(r.message || '删除失败');
         return true;
-    })
+    }, async () => pushDelta('/accountbook/ledger/remove', { bookId: id }))
         .then((res) => ({ ok: res.ok, message: res.message }))
         .catch((err) => ({
         ok: false,
@@ -492,7 +560,15 @@ function cloudFirstRemoveLedger(id) {
     }));
 }
 function cloudFirstUpdateLedgerCover(id, localPath) {
-    return commitWithCloudFirst(() => (0, storage_1.updateLedgerCover)(id, localPath)).then((res) => ({
+    return commitWithCloudMutation(() => (0, storage_1.updateLedgerCover)(id, localPath), async (updated) => {
+        if (!updated)
+            return { ok: false, message: '账本不存在' };
+        const ledger = getLedgerById(id);
+        return pushDelta('/accountbook/ledger/cover/update', {
+            bookId: id,
+            coverImagePath: (ledger === null || ledger === void 0 ? void 0 : ledger.coverImagePath) || '',
+        });
+    }).then((res) => ({
         ok: res.ok && !!res.result,
         message: res.ok && !res.result ? '账本不存在' : res.message,
     }));

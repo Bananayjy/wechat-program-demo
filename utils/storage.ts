@@ -55,14 +55,9 @@ export function runWithAutoSyncSuppressed<T>(fn: () => T): T {
 }
 
 function triggerAutoSync(reason: string): void {
+  void reason;
   if (autoSyncSuppressCount > 0) return;
-  void import('./sync')
-    .then((m) => {
-      m.syncAfterLocalMutation(reason);
-    })
-    .catch(() => {
-      /* empty */
-    });
+  // 增量同步由各 cloudFirst* 入口显式触发；此处不再自动推送全量数据。
 }
 
 function initAccountIfEmpty(accountId: string): void {

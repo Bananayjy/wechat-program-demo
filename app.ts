@@ -1,13 +1,12 @@
 import { getSession } from './utils/session';
 import { clearStorageAccountId, loadSyncConfig, setStorageAccountId } from './utils/storage';
-import { resetLaunchPullFlag } from './utils/sync';
+import { markNeedForegroundSync } from './utils/sync';
 
 App({
   globalData: {},
   onLaunch() {
     if (!wx.cloud) return;
     wx.cloud.init({ traceUser: true });
-    resetLaunchPullFlag();
 
     const s = getSession();
     if (s) {
@@ -24,6 +23,7 @@ App({
 
   onShow() {
     if (!wx.cloud) return;
+    markNeedForegroundSync();
     const s = getSession();
     if (s) {
       setStorageAccountId(s.accountId);

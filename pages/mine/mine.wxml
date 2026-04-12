@@ -60,11 +60,9 @@
     <text>清除本地数据</text>
     <text class="chev">›</text>
   </view>
-  <text class="text-muted clear-hint">将删除当前模式（游客或登录账号）在本机的流水与自定义分类，同步配置也会清空，且无法恢复</text>
 
   <view class="card">
     <text class="block-title">数据同步（可选）</text>
-    <text class="text-muted sub">使用云开发云函数；业务路径以 / 开头，不含 /kapi</text>
     <view class="field">
       <text class="label">云环境 ID（可选）</text>
       <input
@@ -72,15 +70,6 @@
         placeholder="留空则使用当前云环境"
         value="{{cloudEnvId}}"
         bindinput="onCloudEnvInput"
-      />
-    </view>
-    <view class="field">
-      <text class="label">备用 https 站点根地址（可选）</text>
-      <input
-        class="input"
-        placeholder="https://api.example.com"
-        value="{{apiBase}}"
-        bindinput="onApiBaseInput"
       />
     </view>
     <label class="switch-row">
@@ -94,5 +83,5 @@
     </view>
   </view>
 
-  <view class="footer text-muted">小账本 · 本地存储 · 安心守护</view>
+  <view class="footer text-muted">小账本 · 接广告 · 没备案</view>
 </view>
