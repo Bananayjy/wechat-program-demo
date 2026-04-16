@@ -395,17 +395,28 @@ function normalizeSyncConfig(raw: unknown): SyncConfig {
   };
 }
 
+/**
+ *  按当前账号从本地存储里读出「同步配置」，读不到或出错就返回一份安全的默认值
+ * @returns 
+ */
 export function loadSyncConfig(): SyncConfig {
+  // 没有登录到具体账号时，会用 guest_local 兜底，得到当前用于隔离存储的 accountId
   const aid = requireAccountId();
+  // 没有账号 id 时返回「全关、无地址、无云环境」的默认配置
   if (!aid) {
     return { apiBase: '', enabled: false, cloudEnvId: '' };
   }
+
   try {
+    // 读本地键 accountbook_sync_config_v1_${accountId}
     const raw = wx.getStorageSync(keySyncConfig(aid)) as SyncConfig | string | undefined;
+    // 返回「全关、无地址、无云环境」的默认配置
     if (!raw) {
       return { apiBase: '', enabled: false, cloudEnvId: '' };
     }
+    // 转换成 JSON 字符串
     const parsed = typeof raw === 'string' ? JSON.parse(raw) : raw;
+    // 字段清洗
     return normalizeSyncConfig(parsed);
   } catch {
     return { apiBase: '', enabled: false, cloudEnvId: '' };

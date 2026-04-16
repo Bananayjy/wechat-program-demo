@@ -15,8 +15,9 @@ async function callCloudPath(path, payload, cfg) {
     }
     try {
         const cloudEnv = resolveCloudEnv(cfg);
+        // 组装传给微信云函数 wx.cloud.callFunction 的参数
         const args = {
-            name: SYNC_FUNCTION_NAME,
+            name: SYNC_FUNCTION_NAME, // 要调用的云函数名称
             data: {
                 path,
                 payload,

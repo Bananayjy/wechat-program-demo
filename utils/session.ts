@@ -35,15 +35,24 @@ export function isSessionValid(): boolean {
   return getSession() !== null;
 }
 
+// 从本地会话取的登录令牌，云端用来校验身份或调后端
 export function getAuthToken(): string {
   const s = getSession();
   return s?.token || '';
 }
 
+/**
+ * 把登录会话信息同步写入小程序本地存储
+ * @param p 参数 p 的类型是 SessionPayload
+ */
 export function saveSession(p: SessionPayload): void {
+  // 同步把数据存到当前用户在本机上的本地缓存（类似 key-value）
   wx.setStorageSync(KEY_SESSION, p);
 }
 
+/**
+ * 清理小程序本地缓存
+ */
 export function clearSession(): void {
   try {
     wx.removeStorageSync(KEY_SESSION);

@@ -9,6 +9,7 @@
 }
 
 .hero-title {
+  text-align: center;
   display: block;
   font-size: 44rpx;
   font-weight: 800;
