@@ -2,6 +2,7 @@ import { fenToYuan, formatDate, yuanInputToFen } from '../../utils/format';
 import { loadCategories, loadTransactions } from '../../utils/storage';
 import { cloudFirstRemoveTransaction, cloudFirstUpdateTransaction } from '../../utils/sync';
 import type { TxType } from '../../utils/types';
+import { resolveCategoryIconSrc } from '../../utils/category-icons';
 
 Page({
   data: {
@@ -10,7 +11,7 @@ Page({
     txType: 'expense' as TxType,
     amountYuan: '',
     categoryId: '',
-    filteredCategories: [] as { id: string; name: string }[],
+    filteredCategories: [] as { id: string; name: string; iconSrc: string }[],
     dateStr: '',
     note: '',
   },
@@ -52,7 +53,12 @@ Page({
   },
 
   applyCategories(type: TxType) {
-    const all = loadCategories().filter((c) => c.type === type);
+    const all = loadCategories()
+      .filter((c) => c.type === type)
+      .map((c) => ({
+        ...c,
+        iconSrc: resolveCategoryIconSrc(c.iconKey, type),
+      }));
     const cid = this.data.categoryId;
     const next =
       all.some((c) => c.id === cid) ? cid : all[0]?.id || '';

@@ -58,6 +58,12 @@ function sanitizeCategories(raw) {
       id: String(item.id),
       name: typeof item.name === 'string' ? item.name : '',
       type: item.type === 'income' ? 'income' : 'expense',
+      iconKey:
+        typeof item.iconKey === 'string' && item.iconKey.trim()
+          ? item.iconKey.trim()
+          : item.type === 'income'
+          ? 'in_other'
+          : 'exp_other',
     }));
 }
 

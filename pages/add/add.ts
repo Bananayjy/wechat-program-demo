@@ -22,13 +22,14 @@ function appendCalcKey(amountYuan: string, key: string): string {
 import { loadCategories } from '../../utils/storage';
 import { cloudFirstAddTransaction } from '../../utils/sync';
 import type { TxType } from '../../utils/types';
+import { resolveCategoryIconSrc } from '../../utils/category-icons';
 
 Page({
   data: {
     txType: 'expense' as TxType,
     amountYuan: '',
     categoryId: '',
-    filteredCategories: [] as { id: string; name: string }[],
+    filteredCategories: [] as { id: string; name: string; iconSrc: string }[],
     dateStr: '',
     note: '',
   },
@@ -51,7 +52,12 @@ Page({
   },
 
   applyCategories(type: TxType) {
-    const all = loadCategories().filter((c) => c.type === type);
+    const all = loadCategories()
+      .filter((c) => c.type === type)
+      .map((c) => ({
+        ...c,
+        iconSrc: resolveCategoryIconSrc(c.iconKey, type),
+      }));
     const first = all[0]?.id || '';
     this.setData({
       filteredCategories: all,

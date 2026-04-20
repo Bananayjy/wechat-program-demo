@@ -1,6 +1,7 @@
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
 const format_1 = require("../../utils/format");
+const category_icons_1 = require("../../utils/category-icons");
 /** 计算器按键拼接金额，与 yuanInputToFen 上限一致 */
 function appendCalcKey(amountYuan, key) {
     let s = amountYuan;
@@ -56,7 +57,12 @@ Page({
     },
     applyCategories(type) {
         var _a;
-        const all = (0, storage_1.loadCategories)().filter((c) => c.type === type);
+        const all = (0, storage_1.loadCategories)()
+            .filter((c) => c.type === type)
+            .map((c) => ({
+            ...c,
+            iconSrc: (0, category_icons_1.resolveCategoryIconSrc)(c.iconKey, type),
+        }));
         const first = ((_a = all[0]) === null || _a === void 0 ? void 0 : _a.id) || '';
         this.setData({
             filteredCategories: all,

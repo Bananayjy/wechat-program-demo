@@ -33,7 +33,10 @@
           class="chip {{categoryId === item.id ? 'on' : ''}}"
           data-id="{{item.id}}"
           bindtap="onCategoryTap"
-        >{{item.name}}</view>
+        >
+          <image class="chip-icon" src="{{item.iconSrc}}" mode="aspectFit" />
+          <text>{{item.name}}</text>
+        </view>
       </scroll-view>
     </view>
 

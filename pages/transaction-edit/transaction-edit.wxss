@@ -1,4 +1,4 @@
-@import '../add/add.wxss';
+@import '/styles/add-shared.wxss';
 
 .actions {
   display: flex;

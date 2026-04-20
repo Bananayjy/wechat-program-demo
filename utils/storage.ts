@@ -1,4 +1,5 @@
-import type { Category, Ledger, Transaction } from './types';
+import type { Category, Ledger, Transaction, TxType } from './types';
+import { normalizeCategoryIconKey } from './category-icons';
 
 let storageAccountId: string | null = null;
 export const GUEST_ACCOUNT_ID = 'guest_local';
@@ -91,21 +92,48 @@ function ensureStorageReady(): void {
 }
 
 const DEFAULT_EXPENSE: Category[] = [
-  { id: 'c_exp_food', name: '餐饮', type: 'expense' },
-  { id: 'c_exp_transport', name: '交通', type: 'expense' },
-  { id: 'c_exp_shopping', name: '购物', type: 'expense' },
-  { id: 'c_exp_housing', name: '居住', type: 'expense' },
-  { id: 'c_exp_other', name: '其他', type: 'expense' },
+  { id: 'c_exp_food', name: '餐饮', type: 'expense', iconKey: 'exp_food' },
+  { id: 'c_exp_transport', name: '交通', type: 'expense', iconKey: 'exp_transport' },
+  { id: 'c_exp_shopping', name: '购物', type: 'expense', iconKey: 'exp_shopping' },
+  { id: 'c_exp_housing', name: '居住', type: 'expense', iconKey: 'exp_housing' },
+  { id: 'c_exp_other', name: '其他', type: 'expense', iconKey: 'exp_other' },
 ];
 
 const DEFAULT_INCOME: Category[] = [
-  { id: 'c_in_salary', name: '工资', type: 'income' },
-  { id: 'c_in_bonus', name: '奖金', type: 'income' },
-  { id: 'c_in_other', name: '其他', type: 'income' },
+  { id: 'c_in_salary', name: '工资', type: 'income', iconKey: 'in_salary' },
+  { id: 'c_in_bonus', name: '奖金', type: 'income', iconKey: 'in_bonus' },
+  { id: 'c_in_other', name: '其他', type: 'income', iconKey: 'in_other' },
 ];
 
+function fallbackIconKeyByType(type: TxType): string {
+  return type === 'income' ? 'in_other' : 'exp_other';
+}
+
+function normalizeCategory(raw: unknown): Category | null {
+  const parsed = raw as Partial<Category> | undefined;
+  const id = typeof parsed?.id === 'string' ? parsed.id.trim() : '';
+  if (!id) return null;
+  const type: TxType = parsed?.type === 'income' ? 'income' : 'expense';
+  const name = typeof parsed?.name === 'string' ? parsed.name : '';
+  const iconKey = normalizeCategoryIconKey(
+    typeof parsed?.iconKey === 'string' ? parsed.iconKey.trim() : fallbackIconKeyByType(type),
+    type
+  );
+  return { id, name, type, iconKey };
+}
+
+function normalizeCategoryList(raw: unknown): Category[] {
+  if (!Array.isArray(raw)) return [];
+  const out: Category[] = [];
+  for (const item of raw) {
+    const normalized = normalizeCategory(item);
+    if (normalized) out.push(normalized);
+  }
+  return out;
+}
+
 export function getDefaultCategories(): Category[] {
-  return [...DEFAULT_EXPENSE, ...DEFAULT_INCOME];
+  return [...DEFAULT_EXPENSE, ...DEFAULT_INCOME].map((c) => ({ ...c }));
 }
 
 export function loadLedgers(): Ledger[] {
@@ -255,9 +283,11 @@ export function loadCategoriesForBook(bookId: string): Category[] {
   try {
     const raw = wx.getStorageSync(catKey(aid, bookId)) as string | Category[] | undefined;
     if (!raw) return getDefaultCategories();
-    const list = typeof raw === 'string' ? (JSON.parse(raw) as Category[]) : raw;
-    if (!Array.isArray(list) || list.length === 0) return getDefaultCategories();
-    return list;
+    const list = typeof raw === 'string' ? (JSON.parse(raw) as unknown) : raw;
+    const normalized = normalizeCategoryList(list);
+    if (normalized.length === 0) return getDefaultCategories();
+    wx.setStorageSync(catKey(aid, bookId), normalized);
+    return normalized;
   } catch {
     return getDefaultCategories();
   }
@@ -267,7 +297,7 @@ export function saveCategoriesForBook(bookId: string, list: Category[]): void {
   const aid = requireAccountId();
   if (!aid) return;
   ensureStorageReady();
-  wx.setStorageSync(catKey(aid, bookId), list);
+  wx.setStorageSync(catKey(aid, bookId), normalizeCategoryList(list));
 }
 
 export function loadTransactionsForBook(bookId: string): Transaction[] {
@@ -308,7 +338,10 @@ export function saveTransactions(list: Transaction[]): void {
 }
 
 export function addCategory(c: Omit<Category, 'id'>): Category {
-  const item: Category = { ...c, id: uid() };
+  const item = normalizeCategory({ ...c, id: uid() });
+  if (!item) {
+    throw new Error('分类数据无效');
+  }
   const list = loadCategories();
   list.push(item);
   saveCategories(list);
@@ -320,7 +353,9 @@ export function updateCategory(id: string, patch: Partial<Omit<Category, 'id'>>)
   const list = loadCategories();
   const i = list.findIndex((x) => x.id === id);
   if (i < 0) return false;
-  list[i] = { ...list[i], ...patch };
+  const next = normalizeCategory({ ...list[i], ...patch, id });
+  if (!next) return false;
+  list[i] = next;
   saveCategories(list);
   triggerAutoSync('updateCategory');
   return true;

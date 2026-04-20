@@ -198,7 +198,7 @@ Page({
         wx.navigateTo({ url: '/pages/ledger-manage/ledger-manage' });
     },
     goCategories() {
-        wx.navigateTo({ url: '/pages/category-edit/category-edit' });
+        wx.navigateTo({ url: '/pages/category-expense/category-expense' });
     },
     onClearLocal() {
         wx.showModal({

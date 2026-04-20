@@ -33,6 +33,7 @@ exports.buildFullSyncPayload = buildFullSyncPayload;
 exports.applyFullSyncPayload = applyFullSyncPayload;
 exports.clearAllLocalAccountData = clearAllLocalAccountData;
 exports.uid = uid;
+const category_icons_1 = require("./category-icons");
 let storageAccountId = null;
 exports.GUEST_ACCOUNT_ID = 'guest_local';
 /** 登录成功后必须调用，之后所有账本读写均隔离在该账号下 */
@@ -115,19 +116,46 @@ function ensureStorageReady() {
     initAccountIfEmpty(aid);
 }
 const DEFAULT_EXPENSE = [
-    { id: 'c_exp_food', name: '餐饮', type: 'expense' },
-    { id: 'c_exp_transport', name: '交通', type: 'expense' },
-    { id: 'c_exp_shopping', name: '购物', type: 'expense' },
-    { id: 'c_exp_housing', name: '居住', type: 'expense' },
-    { id: 'c_exp_other', name: '其他', type: 'expense' },
+    { id: 'c_exp_food', name: '餐饮', type: 'expense', iconKey: 'exp_food' },
+    { id: 'c_exp_transport', name: '交通', type: 'expense', iconKey: 'exp_transport' },
+    { id: 'c_exp_shopping', name: '购物', type: 'expense', iconKey: 'exp_shopping' },
+    { id: 'c_exp_housing', name: '居住', type: 'expense', iconKey: 'exp_housing' },
+    { id: 'c_exp_other', name: '其他', type: 'expense', iconKey: 'exp_other' },
 ];
 const DEFAULT_INCOME = [
-    { id: 'c_in_salary', name: '工资', type: 'income' },
-    { id: 'c_in_bonus', name: '奖金', type: 'income' },
-    { id: 'c_in_other', name: '其他', type: 'income' },
+    { id: 'c_in_salary', name: '工资', type: 'income', iconKey: 'in_salary' },
+    { id: 'c_in_bonus', name: '奖金', type: 'income', iconKey: 'in_bonus' },
+    { id: 'c_in_other', name: '其他', type: 'income', iconKey: 'in_other' },
 ];
+function fallbackIconKeyByType(type) {
+    return type === 'income' ? 'in_other' : 'exp_other';
+}
+function normalizeCategory(raw) {
+    var _a, _b;
+    const parsed = raw;
+    const id = typeof (parsed === null || parsed === void 0 ? void 0 : parsed.id) === 'string' ? parsed.id.trim() : '';
+    if (!id)
+        return null;
+    const type = (parsed === null || parsed === void 0 ? void 0 : parsed.type) === 'income' ? 'income' : 'expense';
+    const name = typeof (parsed === null || parsed === void 0 ? void 0 : parsed.name) === 'string' ? parsed.name : '';
+    const iconKey = (0, category_icons_1.normalizeCategoryIconKey)(typeof ((_a = parsed === null || parsed === void 0 ? void 0 : parsed.iconKey) === null || _a === void 0 ? void 0 : _a.trim()) === 'string' && ((_b = parsed === null || parsed === void 0 ? void 0 : parsed.iconKey) === null || _b === void 0 ? void 0 : _b.trim())
+        ? parsed.iconKey.trim()
+        : fallbackIconKeyByType(type), type);
+    return { id, name, type, iconKey };
+}
+function normalizeCategoryList(raw) {
+    if (!Array.isArray(raw))
+        return [];
+    const out = [];
+    for (const item of raw) {
+        const normalized = normalizeCategory(item);
+        if (normalized)
+            out.push(normalized);
+    }
+    return out;
+}
 function getDefaultCategories() {
-    return [...DEFAULT_EXPENSE, ...DEFAULT_INCOME];
+    return [...DEFAULT_EXPENSE, ...DEFAULT_INCOME].map((c) => ({ ...c }));
 }
 function loadLedgers() {
     const aid = requireAccountId();
@@ -290,9 +318,11 @@ function loadCategoriesForBook(bookId) {
         if (!raw)
             return getDefaultCategories();
         const list = typeof raw === 'string' ? JSON.parse(raw) : raw;
-        if (!Array.isArray(list) || list.length === 0)
+        const normalized = normalizeCategoryList(list);
+        if (normalized.length === 0)
             return getDefaultCategories();
-        return list;
+        wx.setStorageSync(catKey(aid, bookId), normalized);
+        return normalized;
     }
     catch (_a) {
         return getDefaultCategories();
@@ -303,7 +333,7 @@ function saveCategoriesForBook(bookId, list) {
     if (!aid)
         return;
     ensureStorageReady();
-    wx.setStorageSync(catKey(aid, bookId), list);
+    wx.setStorageSync(catKey(aid, bookId), normalizeCategoryList(list));
 }
 function loadTransactionsForBook(bookId) {
     const aid = requireAccountId();
@@ -341,7 +371,10 @@ function saveTransactions(list) {
     saveTransactionsForBook(getCurrentBookId(), list);
 }
 function addCategory(c) {
-    const item = { ...c, id: uid() };
+    const item = normalizeCategory({ ...c, id: uid() });
+    if (!item) {
+        throw new Error('分类数据无效');
+    }
     const list = loadCategories();
     list.push(item);
     saveCategories(list);
@@ -353,7 +386,10 @@ function updateCategory(id, patch) {
     const i = list.findIndex((x) => x.id === id);
     if (i < 0)
         return false;
-    list[i] = { ...list[i], ...patch };
+    const next = normalizeCategory({ ...list[i], ...patch, id });
+    if (!next)
+        return false;
+    list[i] = next;
     saveCategories(list);
     triggerAutoSync('updateCategory');
     return true;

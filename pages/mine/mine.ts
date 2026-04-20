@@ -214,7 +214,7 @@ Page({
   },
 
   goCategories() {
-    wx.navigateTo({ url: '/pages/category-edit/category-edit' });
+    wx.navigateTo({ url: '/pages/category-expense/category-expense' });
   },
 
   onClearLocal() {

@@ -14,6 +14,8 @@ export interface Category {
   id: string;
   name: string;
   type: TxType;
+  /** 系统预设图标编码 */
+  iconKey: string;
 }
 
 export interface Transaction {

@@ -16,8 +16,12 @@
       "pages": ["ledger-manage"]
     },
     {
-      "root": "pages/category-edit",
-      "pages": ["category-edit"]
+      "root": "pages/category-expense",
+      "pages": ["category-expense"]
+    },
+    {
+      "root": "pages/category-income",
+      "pages": ["category-income"]
     },
     {
       "root": "pages/transaction-edit",
@@ -31,7 +35,11 @@
     },
     "pages/mine/mine": {
       "network": "all",
-      "packages": ["pages/ledger-manage", "pages/category-edit"]
+      "packages": [
+        "pages/ledger-manage",
+        "pages/category-expense",
+        "pages/category-income"
+      ]
     },
     "pages/list/list": {
       "network": "all",
