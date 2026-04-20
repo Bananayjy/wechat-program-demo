@@ -1,14 +1,28 @@
 <view class="page safe-bottom">
   <view class="card">
     <view class="seg small">
-      <view class="seg-item" data-type="expense" bindtap="onTypeTap">支出</view>
-      <view class="seg-item on" data-type="income" bindtap="onTypeTap">收入</view>
+      <view
+        class="seg-item {{currentType === 'expense' ? 'on' : ''}}"
+        data-type="expense"
+        bindtap="onTypeTap"
+      >
+        支出
+      </view>
+      <view
+        class="seg-item {{currentType === 'income' ? 'on' : ''}}"
+        data-type="income"
+        bindtap="onTypeTap"
+      >
+        收入
+      </view>
     </view>
-    <view class="text-muted switch-hint">当前维护：收入分类</view>
+    <view class="text-muted switch-hint">
+      当前维护：{{currentType === 'expense' ? '支出' : '收入'}}分类
+    </view>
   </view>
 
   <view class="card">
-    <text class="section-title">收入分类（网格）</text>
+    <text class="section-title">{{currentType === 'expense' ? '支出' : '收入'}}分类（网格）</text>
     <view class="grid">
       <view wx:for="{{categoryList}}" wx:key="id" class="cat-card">
         <view class="cat-main">
@@ -35,7 +49,7 @@
 
   <view class="modal-mask" wx:if="{{showCreateModal}}" bindtap="closeCreateModal">
     <view class="modal-panel card" catchtap="noop">
-      <text class="section-title">新增收入分类</text>
+      <text class="section-title">新增{{currentType === 'expense' ? '支出' : '收入'}}分类</text>
       <view class="add-row">
         <input
           class="input"

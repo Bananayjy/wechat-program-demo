@@ -1,8 +1,8 @@
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
 const ROUTE_MAP = {
-    expense: '/pages/category-expense/category-expense',
-    income: '/pages/category-income/category-income',
+    expense: '/pages/category-manage/category-manage?type=expense',
+    income: '/pages/category-manage/category-manage?type=income',
 };
 Page({
     data: {

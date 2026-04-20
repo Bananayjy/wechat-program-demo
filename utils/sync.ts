@@ -21,6 +21,7 @@ import {
   type AccountBookSyncPayload,
   type SyncConfig,
 } from './storage';
+import { normalizeCategoryIconKey } from './category-icons';
 import type { Category, Ledger, Transaction } from './types';
 import { callCloudPath } from './cloudSync';
 import { getSession } from './session';
@@ -232,6 +233,46 @@ function getTxById(bookId: string, id: string): Transaction | undefined {
 
 function getCategoryById(bookId: string, id: string): Category | undefined {
   return loadCategoriesForBook(bookId).find((item) => item.id === id);
+}
+
+function normalizeCategoryEntity(category: Category): Category {
+  const type = category.type === 'income' ? 'income' : 'expense';
+  return {
+    ...category,
+    type,
+    iconKey: normalizeCategoryIconKey(category.iconKey, type),
+  };
+}
+
+function normalizeCategoryInput(input: Omit<Category, 'id'>): Omit<Category, 'id'> {
+  const type = input.type === 'income' ? 'income' : 'expense';
+  return {
+    ...input,
+    type,
+    iconKey: normalizeCategoryIconKey(input.iconKey, type),
+  };
+}
+
+function normalizeCategoryPatch(
+  base: Category | undefined,
+  patch: Partial<Omit<Category, 'id'>>
+): Partial<Omit<Category, 'id'>> {
+  const normalized: Partial<Omit<Category, 'id'>> = { ...patch };
+  if (patch.type) {
+    normalized.type = patch.type === 'income' ? 'income' : 'expense';
+  }
+  if (typeof patch.iconKey === 'string') {
+    const typeForIcon = normalized.type || base?.type || 'expense';
+    normalized.iconKey = normalizeCategoryIconKey(patch.iconKey, typeForIcon);
+  }
+  return normalized;
+}
+
+function normalizeCategoryListForSync(
+  categories: AccountBookSyncPayload['books'][number]['categories']
+): AccountBookSyncPayload['books'][number]['categories'] {
+  if (!Array.isArray(categories)) return [];
+  return categories.map((item) => normalizeCategoryEntity(item));
 }
 
 function getLedgerById(id: string): Ledger | undefined {
@@ -495,7 +536,9 @@ export async function pullFromRemote(): Promise<{ ok: boolean; message: string }
         return { ok: false, message: `拉取账本失败(${bookId})：${pageRes.message}` };
       }
       if (offset === 0) {
-        categories = Array.isArray(pageRes.data.categories) ? pageRes.data.categories : [];
+        categories = normalizeCategoryListForSync(
+          Array.isArray(pageRes.data.categories) ? pageRes.data.categories : []
+        );
       }
       if (Array.isArray(pageRes.data.transactions)) {
         transactions.push(...pageRes.data.transactions);
@@ -597,9 +640,14 @@ export function cloudFirstAddCategory(
   input: Omit<Category, 'id'>
 ): Promise<{ ok: boolean; message: string; item?: Category }> {
   const bookId = getCurrentBookId();
+  const normalizedInput = normalizeCategoryInput(input);
   return commitWithCloudMutation(
-    () => addCategory(input),
-    async (item) => pushDelta('/accountbook/category/add', { bookId, category: item })
+    () => addCategory(normalizedInput),
+    async (item) =>
+      pushDelta('/accountbook/category/add', {
+        bookId,
+        category: normalizeCategoryEntity(item),
+      })
   ).then((res) => ({
     ok: res.ok,
     message: res.message,
@@ -612,13 +660,18 @@ export function cloudFirstUpdateCategory(
   patch: Partial<Omit<Category, 'id'>>
 ): Promise<{ ok: boolean; message: string }> {
   const bookId = getCurrentBookId();
+  const base = getCategoryById(bookId, id);
+  const normalizedPatch = normalizeCategoryPatch(base, patch);
   return commitWithCloudMutation(
-    () => updateCategory(id, patch),
+    () => updateCategory(id, normalizedPatch),
     async (updated) => {
       if (!updated) return { ok: false, message: '分类不存在' };
       const category = getCategoryById(bookId, id);
       if (!category) return { ok: false, message: '分类不存在' };
-      return pushDelta('/accountbook/category/update', { bookId, category });
+      return pushDelta('/accountbook/category/update', {
+        bookId,
+        category: normalizeCategoryEntity(category),
+      });
     }
   ).then((res) => ({
     ok: res.ok && !!res.result,

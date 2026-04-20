@@ -14,8 +14,8 @@ const USER_COLLECTION = 'app_users';
 const WECHAT_BINDING_COLLECTION = 'wechat_bindings';
 
 // const JWT_SECRET = process.env.JWT_SECRET || '';
-const JWT_SECRET = '6';
-const JWT_EXPIRES_SEC = 6 * 60 * 60;
+const JWT_SECRET = '999';
+const JWT_EXPIRES_SEC = 999 * 60 * 60;
 
 function ok(data, message = 'ok', statusCode = 200) {
   return { ok: true, statusCode, message, data };
@@ -54,17 +54,22 @@ function sanitizeLedgers(raw) {
 function sanitizeCategories(raw) {
   return normalizeArray(raw)
     .filter((item) => item && item.id)
-    .map((item) => ({
-      id: String(item.id),
-      name: typeof item.name === 'string' ? item.name : '',
-      type: item.type === 'income' ? 'income' : 'expense',
-      iconKey:
+    .map((item) => {
+      const type = item.type === 'income' ? 'income' : 'expense';
+      // 分类图标只同步 iconKey；空值按分类类型回退到默认图标编码
+      const iconKey =
         typeof item.iconKey === 'string' && item.iconKey.trim()
           ? item.iconKey.trim()
-          : item.type === 'income'
+          : type === 'income'
           ? 'in_other'
-          : 'exp_other',
-    }));
+          : 'exp_other';
+      return {
+        id: String(item.id),
+        name: typeof item.name === 'string' ? item.name : '',
+        type,
+        iconKey,
+      };
+    });
 }
 
 function sanitizeTransactions(raw) {

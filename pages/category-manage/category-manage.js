@@ -3,68 +3,94 @@ Object.defineProperty(exports, "__esModule", { value: true });
 const category_icons_1 = require("../../utils/category-icons");
 const storage_1 = require("../../utils/storage");
 const sync_1 = require("../../utils/sync");
-const PAGE_TYPE = 'expense';
-const OTHER_PAGE_URL = '/pages/category-income/category-income';
+function isValidType(type) {
+    return type === 'income' || type === 'expense';
+}
 Page({
     data: {
-        currentType: PAGE_TYPE,
+        currentType: 'expense',
         categoryList: [],
         showAddPlaceholder: false,
-        iconOptions: (0, category_icons_1.getCategoryIcons)(PAGE_TYPE),
+        iconOptions: (0, category_icons_1.getCategoryIcons)('expense'),
         showCreateModal: false,
         showEditIconModal: false,
         editTargetId: '',
-        editIconKey: (0, category_icons_1.getDefaultIconKeyByType)(PAGE_TYPE),
+        editIconKey: (0, category_icons_1.getDefaultIconKeyByType)('expense'),
         newName: '',
-        newIconKey: (0, category_icons_1.getDefaultIconKeyByType)(PAGE_TYPE),
+        newIconKey: (0, category_icons_1.getDefaultIconKeyByType)('expense'),
+    },
+    onLoad(q) {
+        const type = q.type;
+        if (!isValidType(type))
+            return;
+        this.setData({
+            currentType: type,
+            iconOptions: (0, category_icons_1.getCategoryIcons)(type),
+            newIconKey: (0, category_icons_1.getDefaultIconKeyByType)(type),
+            editIconKey: (0, category_icons_1.getDefaultIconKeyByType)(type),
+        });
     },
     onShow() {
         this.refresh();
     },
     refresh() {
+        const type = this.data.currentType;
         const list = (0, storage_1.loadCategories)()
-            .filter((c) => c.type === PAGE_TYPE)
+            .filter((c) => c.type === type)
             .map((c) => ({
             ...c,
-            iconKey: (0, category_icons_1.normalizeCategoryIconKey)(c.iconKey, PAGE_TYPE),
-            iconSrc: (0, category_icons_1.resolveCategoryIconSrc)(c.iconKey, PAGE_TYPE),
+            iconKey: (0, category_icons_1.normalizeCategoryIconKey)(c.iconKey, type),
+            iconSrc: (0, category_icons_1.resolveCategoryIconSrc)(c.iconKey, type),
         }));
-        const newIconKey = (0, category_icons_1.normalizeCategoryIconKey)(this.data.newIconKey, PAGE_TYPE);
         this.setData({
             categoryList: list,
             showAddPlaceholder: list.length % 2 === 0,
-            iconOptions: (0, category_icons_1.getCategoryIcons)(PAGE_TYPE),
-            newIconKey,
+            iconOptions: (0, category_icons_1.getCategoryIcons)(type),
+            newIconKey: (0, category_icons_1.normalizeCategoryIconKey)(this.data.newIconKey, type),
+            editIconKey: (0, category_icons_1.normalizeCategoryIconKey)(this.data.editIconKey, type),
         });
     },
     onTypeTap(e) {
-        const type = e.currentTarget.dataset.type;
-        if (!type || type === PAGE_TYPE)
+        const nextType = e.currentTarget.dataset.type;
+        if (!isValidType(nextType) || nextType === this.data.currentType)
             return;
-        wx.redirectTo({ url: OTHER_PAGE_URL });
+        this.setData({
+            currentType: nextType,
+            showCreateModal: false,
+            showEditIconModal: false,
+            editTargetId: '',
+            newName: '',
+            newIconKey: (0, category_icons_1.getDefaultIconKeyByType)(nextType),
+            editIconKey: (0, category_icons_1.getDefaultIconKeyByType)(nextType),
+            iconOptions: (0, category_icons_1.getCategoryIcons)(nextType),
+        });
+        this.refresh();
     },
     noop() {
         // 用于阻止弹层点击冒泡到遮罩层
     },
     openCreateModal() {
+        const type = this.data.currentType;
         this.setData({
             showCreateModal: true,
             newName: '',
-            newIconKey: (0, category_icons_1.getDefaultIconKeyByType)(PAGE_TYPE),
+            newIconKey: (0, category_icons_1.getDefaultIconKeyByType)(type),
         });
     },
     closeCreateModal() {
+        const type = this.data.currentType;
         this.setData({
             showCreateModal: false,
             newName: '',
-            newIconKey: (0, category_icons_1.getDefaultIconKeyByType)(PAGE_TYPE),
+            newIconKey: (0, category_icons_1.getDefaultIconKeyByType)(type),
         });
     },
     closeEditIconModal() {
+        const type = this.data.currentType;
         this.setData({
             showEditIconModal: false,
             editTargetId: '',
-            editIconKey: (0, category_icons_1.getDefaultIconKeyByType)(PAGE_TYPE),
+            editIconKey: (0, category_icons_1.getDefaultIconKeyByType)(type),
         });
     },
     onNewNameInput(e) {
@@ -74,13 +100,15 @@ Page({
         const key = e.currentTarget.dataset.key;
         if (!key)
             return;
-        this.setData({ newIconKey: (0, category_icons_1.normalizeCategoryIconKey)(key, PAGE_TYPE) });
+        const type = this.data.currentType;
+        this.setData({ newIconKey: (0, category_icons_1.normalizeCategoryIconKey)(key, type) });
     },
     onPickEditIcon(e) {
         const key = e.currentTarget.dataset.key;
         if (!key)
             return;
-        this.setData({ editIconKey: (0, category_icons_1.normalizeCategoryIconKey)(key, PAGE_TYPE) });
+        const type = this.data.currentType;
+        this.setData({ editIconKey: (0, category_icons_1.normalizeCategoryIconKey)(key, type) });
     },
     async confirmCreate() {
         const name = this.data.newName.trim();
@@ -88,8 +116,9 @@ Page({
             wx.showToast({ title: '请输入名称', icon: 'none' });
             return;
         }
-        const iconKey = (0, category_icons_1.normalizeCategoryIconKey)(this.data.newIconKey, PAGE_TYPE);
-        const r = await (0, sync_1.cloudFirstAddCategory)({ name, type: PAGE_TYPE, iconKey });
+        const type = this.data.currentType;
+        const iconKey = (0, category_icons_1.normalizeCategoryIconKey)(this.data.newIconKey, type);
+        const r = await (0, sync_1.cloudFirstAddCategory)({ name, type, iconKey });
         if (!r.ok) {
             wx.showToast({ title: r.message, icon: 'none' });
             return;
@@ -138,17 +167,19 @@ Page({
         const item = this.data.categoryList.find((c) => c.id === id);
         if (!item)
             return;
+        const type = this.data.currentType;
         this.setData({
             showEditIconModal: true,
             editTargetId: id,
-            editIconKey: (0, category_icons_1.normalizeCategoryIconKey)(item.iconKey, PAGE_TYPE),
+            editIconKey: (0, category_icons_1.normalizeCategoryIconKey)(item.iconKey, type),
         });
     },
     async confirmEditIcon() {
         const id = this.data.editTargetId.trim();
         if (!id)
             return;
-        const iconKey = (0, category_icons_1.normalizeCategoryIconKey)(this.data.editIconKey, PAGE_TYPE);
+        const type = this.data.currentType;
+        const iconKey = (0, category_icons_1.normalizeCategoryIconKey)(this.data.editIconKey, type);
         const r = await (0, sync_1.cloudFirstUpdateCategory)(id, { iconKey });
         if (!r.ok) {
             wx.showToast({ title: r.message, icon: 'none' });

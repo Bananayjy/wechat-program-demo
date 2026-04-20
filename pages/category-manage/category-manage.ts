@@ -16,21 +16,33 @@ interface CategoryVM extends Category {
   iconSrc: string;
 }
 
-const PAGE_TYPE: TxType = 'expense';
-const OTHER_PAGE_URL = '/pages/category-income/category-income';
+function isValidType(type: string | undefined): type is TxType {
+  return type === 'income' || type === 'expense';
+}
 
 Page({
   data: {
-    currentType: PAGE_TYPE as TxType,
+    currentType: 'expense' as TxType,
     categoryList: [] as CategoryVM[],
     showAddPlaceholder: false,
-    iconOptions: getCategoryIcons(PAGE_TYPE),
+    iconOptions: getCategoryIcons('expense'),
     showCreateModal: false,
     showEditIconModal: false,
     editTargetId: '',
-    editIconKey: getDefaultIconKeyByType(PAGE_TYPE),
+    editIconKey: getDefaultIconKeyByType('expense'),
     newName: '',
-    newIconKey: getDefaultIconKeyByType(PAGE_TYPE),
+    newIconKey: getDefaultIconKeyByType('expense'),
+  },
+
+  onLoad(q: Record<string, string | undefined>) {
+    const type = q.type;
+    if (!isValidType(type)) return;
+    this.setData({
+      currentType: type,
+      iconOptions: getCategoryIcons(type),
+      newIconKey: getDefaultIconKeyByType(type),
+      editIconKey: getDefaultIconKeyByType(type),
+    });
   },
 
   onShow() {
@@ -38,26 +50,37 @@ Page({
   },
 
   refresh() {
+    const type = this.data.currentType as TxType;
     const list = loadCategories()
-      .filter((c) => c.type === PAGE_TYPE)
+      .filter((c) => c.type === type)
       .map((c) => ({
         ...c,
-        iconKey: normalizeCategoryIconKey(c.iconKey, PAGE_TYPE),
-        iconSrc: resolveCategoryIconSrc(c.iconKey, PAGE_TYPE),
+        iconKey: normalizeCategoryIconKey(c.iconKey, type),
+        iconSrc: resolveCategoryIconSrc(c.iconKey, type),
       }));
-    const newIconKey = normalizeCategoryIconKey(this.data.newIconKey, PAGE_TYPE);
     this.setData({
       categoryList: list,
       showAddPlaceholder: list.length % 2 === 0,
-      iconOptions: getCategoryIcons(PAGE_TYPE),
-      newIconKey,
+      iconOptions: getCategoryIcons(type),
+      newIconKey: normalizeCategoryIconKey(this.data.newIconKey, type),
+      editIconKey: normalizeCategoryIconKey(this.data.editIconKey, type),
     });
   },
 
   onTypeTap(e: WechatMiniprogram.TouchEvent) {
-    const type = e.currentTarget.dataset.type as TxType;
-    if (!type || type === PAGE_TYPE) return;
-    wx.redirectTo({ url: OTHER_PAGE_URL });
+    const nextType = e.currentTarget.dataset.type as string | undefined;
+    if (!isValidType(nextType) || nextType === this.data.currentType) return;
+    this.setData({
+      currentType: nextType,
+      showCreateModal: false,
+      showEditIconModal: false,
+      editTargetId: '',
+      newName: '',
+      newIconKey: getDefaultIconKeyByType(nextType),
+      editIconKey: getDefaultIconKeyByType(nextType),
+      iconOptions: getCategoryIcons(nextType),
+    });
+    this.refresh();
   },
 
   noop() {
@@ -65,26 +88,29 @@ Page({
   },
 
   openCreateModal() {
+    const type = this.data.currentType as TxType;
     this.setData({
       showCreateModal: true,
       newName: '',
-      newIconKey: getDefaultIconKeyByType(PAGE_TYPE),
+      newIconKey: getDefaultIconKeyByType(type),
     });
   },
 
   closeCreateModal() {
+    const type = this.data.currentType as TxType;
     this.setData({
       showCreateModal: false,
       newName: '',
-      newIconKey: getDefaultIconKeyByType(PAGE_TYPE),
+      newIconKey: getDefaultIconKeyByType(type),
     });
   },
 
   closeEditIconModal() {
+    const type = this.data.currentType as TxType;
     this.setData({
       showEditIconModal: false,
       editTargetId: '',
-      editIconKey: getDefaultIconKeyByType(PAGE_TYPE),
+      editIconKey: getDefaultIconKeyByType(type),
     });
   },
 
@@ -95,13 +121,15 @@ Page({
   onPickNewIcon(e: WechatMiniprogram.TouchEvent) {
     const key = e.currentTarget.dataset.key as string;
     if (!key) return;
-    this.setData({ newIconKey: normalizeCategoryIconKey(key, PAGE_TYPE) });
+    const type = this.data.currentType as TxType;
+    this.setData({ newIconKey: normalizeCategoryIconKey(key, type) });
   },
 
   onPickEditIcon(e: WechatMiniprogram.TouchEvent) {
     const key = e.currentTarget.dataset.key as string;
     if (!key) return;
-    this.setData({ editIconKey: normalizeCategoryIconKey(key, PAGE_TYPE) });
+    const type = this.data.currentType as TxType;
+    this.setData({ editIconKey: normalizeCategoryIconKey(key, type) });
   },
 
   async confirmCreate() {
@@ -110,8 +138,9 @@ Page({
       wx.showToast({ title: '请输入名称', icon: 'none' });
       return;
     }
-    const iconKey = normalizeCategoryIconKey(this.data.newIconKey, PAGE_TYPE);
-    const r = await cloudFirstAddCategory({ name, type: PAGE_TYPE, iconKey });
+    const type = this.data.currentType as TxType;
+    const iconKey = normalizeCategoryIconKey(this.data.newIconKey, type);
+    const r = await cloudFirstAddCategory({ name, type, iconKey });
     if (!r.ok) {
       wx.showToast({ title: r.message, icon: 'none' });
       return;
@@ -157,17 +186,19 @@ Page({
     if (!id) return;
     const item = this.data.categoryList.find((c) => c.id === id);
     if (!item) return;
+    const type = this.data.currentType as TxType;
     this.setData({
       showEditIconModal: true,
       editTargetId: id,
-      editIconKey: normalizeCategoryIconKey(item.iconKey, PAGE_TYPE),
+      editIconKey: normalizeCategoryIconKey(item.iconKey, type),
     });
   },
 
   async confirmEditIcon() {
     const id = this.data.editTargetId.trim();
     if (!id) return;
-    const iconKey = normalizeCategoryIconKey(this.data.editIconKey, PAGE_TYPE);
+    const type = this.data.currentType as TxType;
+    const iconKey = normalizeCategoryIconKey(this.data.editIconKey, type);
     const r = await cloudFirstUpdateCategory(id, { iconKey });
     if (!r.ok) {
       wx.showToast({ title: r.message, icon: 'none' });

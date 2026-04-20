@@ -1,8 +1,8 @@
 import type { TxType } from '../../utils/types';
 
 const ROUTE_MAP: Record<TxType, string> = {
-  expense: '/pages/category-expense/category-expense',
-  income: '/pages/category-income/category-income',
+  expense: '/pages/category-manage/category-manage?type=expense',
+  income: '/pages/category-manage/category-manage?type=income',
 };
 
 Page({
